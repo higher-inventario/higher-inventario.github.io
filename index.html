@@ -37,6 +37,9 @@
   @media(min-width:700px){.list{grid-template-columns:1fr 1fr}}
   .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
   .item:active{background:var(--card2)}
+  .th{width:58px;height:58px;flex:none;border-radius:10px;background:#fff;object-fit:contain}
+  .hero{background:#fff;border-radius:16px;height:200px;display:flex;align-items:center;justify-content:center;margin-top:12px;overflow:hidden}
+  .hero img{max-height:190px;max-width:100%;object-fit:contain}
   .item .n{font-weight:600} .item .s{font-size:12.5px;color:var(--sub);margin-top:2px}
   .pill{margin-left:auto;text-align:right;min-width:54px}
   .pill b{font-size:18px;display:block} .pill small{color:var(--sub);font-size:11px}
@@ -149,12 +152,42 @@ function vModelos(){
     </div><div class="list" id="lista"></div>`;
   pintarLista();
 }
+/* ---------- fotos de cada modelo (tomadas de higherboots.com) ---------- */
+const URL_FOTOS = 'https://higherboots.com/wp-content/uploads/';
+const FOTOS = {
+  'bota fusion':'2026/08/6-2-300x300.png',
+  'bota race white':'2026/08/Bota-Race-White-1-300x300.png',
+  'bota militar':'2026/03/1-300x300.png',
+  'botin force':'2026/02/1-15-300x300.png',
+  'botin urban soft':'2026/02/1-14-scaled-300x300.png',
+  'botin force industrial':'2026/02/1-16-300x300.png',
+  'botin sport':'2026/02/1-10-300x300.png',
+  'bota race':'2026/02/1-5-300x300.png',
+  'botin street':'2026/02/1-300x300.png',
+  'bota ingeniero nobuck':'2025/05/BOTA-INGENIERO-NOBUCK_0227-300x300.webp',
+  'bota ingeniero lona':'2025/05/DSC_0101-Editar-300x300.png',
+  'bota ingeniero':'2025/05/BOTA-INGENIERO-NEGRA_0207-300x300.webp',
+  'bota basica industrial':'2025/05/BOTA-BASICA-INDUSTRIAL_0223-300x300.webp',
+  'bota militar motorizada':'2025/05/BOTA-MILITAR-MOTORIZADA_0063-300x300.webp',
+  'bota motorizada media cana':'2025/05/BOTA-MOTORIZADA-MEDIA-CANA_0126-300x300.webp',
+  'bota motorizada cana alta elite':'2025/05/BOTA-CANA-ALTA-ELITE_0032-300x300.webp',
+  'botin urban':'2025/05/BOTIN-URBAN-BOA-NEON_0171--300x300.webp',
+  'botin urban flex':'2025/05/BOTIN-URBAN-SOFT_0050-300x300.webp',
+  'botin urban go':'2025/05/BOTIN-URBAN-CORDON_0151-300x300.webp',
+  'bota touring race':'2025/05/1-2-300x300.png'
+};
+function foto(modelo){
+  const k = String(modelo).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  return FOTOS[k] ? URL_FOTOS + FOTOS[k] : '';
+}
+
 function pintarLista(){
   const q = S.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const norm = s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const ms = modelos().filter(m=>!q || norm(m.modelo).includes(q) || [...m.colores].some(c=>norm(c).includes(q)));
   $('#lista').innerHTML = ms.length ? ms.map(m=>`
     <div class="item" data-m="${esc(m.modelo)}">
+      ${foto(m.modelo) ? `<img class="th" loading="lazy" src="${foto(m.modelo)}" alt="">` : '<div class="th"></div>'}
       <div><div class="n">${esc(m.modelo)}</div>
       <div class="s">${[...m.colores].map(esc).join(' · ')}</div></div>
       <div class="pill"><b>${fmt(m.pares)}</b><small class="${m.bajos?'warn':''}">${m.bajos?m.bajos+' bajo mín.':'pares'}</small></div>
@@ -175,7 +208,8 @@ function vDetalle(){
   document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
   const tallas = filas.filter(f=>f.color===S.color).sort((a,b)=>a.talla-b.talla);
   const totColor = tallas.reduce((a,f)=>a+f.pares,0);
-  $('#app').innerHTML = `<div class="grid">${tallas.map(f=>`
+  const ft = foto(S.modelo);
+  $('#app').innerHTML = (ft ? `<div class="hero"><img src="${ft}" alt="${esc(S.modelo)}"></div>` : '') + `<div class="grid">${tallas.map(f=>`
       <div class="cell ${f.pares<f.minimo?'low':''}" data-id="${esc(f.id)}">
         <div class="t">Talla ${f.talla}</div>
         <div class="q" title="Toca para escribir la cantidad exacta">${f.pares}</div>
