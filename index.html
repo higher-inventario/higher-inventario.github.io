@@ -16,38 +16,59 @@
   :root{
     --bg:#0E0E0F; --card:#18181A; --card2:#222225; --line:#2C2C30;
     --txt:#F4F4F5; --sub:#9A9AA2; --acc:#F5B300; --ok:#22C55E; --bad:#EF4444;
+    --foto:#EDEDEF;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  header{position:sticky;top:0;z-index:5;background:rgba(14,14,15,.94);backdrop-filter:blur(10px);padding:calc(14px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line)}
+  header{position:sticky;top:0;z-index:5;background:rgba(14,14,15,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .hin{max-width:960px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px 10px}
   .top{display:flex;align-items:center;gap:10px}
   .logo{height:30px;width:auto;display:block;margin-bottom:4px}
   h1{font-size:20px;margin:2px 0 0;font-weight:700}
   .sync{margin-left:auto;font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
   .dot.busy{background:var(--acc)} .dot.err{background:var(--bad)}
-  .back{background:none;border:0;color:var(--acc);font-size:15px;padding:0;margin-bottom:4px;cursor:pointer}
-  input,select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 12px;font-size:16px;outline:none}
+  .back{background:none;border:0;color:var(--acc);font-size:15px;padding:0;margin-bottom:6px;cursor:pointer}
+  input{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 12px;font-size:16px;outline:none}
   input:focus{border-color:var(--acc)}
-  main{padding:12px 16px 96px;max-width:900px;margin:0 auto}
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 4px}
+  main{padding:12px 16px 100px;max-width:960px;margin:0 auto}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
   .stat b{display:block;font-size:20px} .stat span{font-size:12px;color:var(--sub)}
-  .list{display:grid;gap:8px;margin-top:12px}
-  @media(min-width:700px){.list{grid-template-columns:1fr 1fr}}
-  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
-  .item:active{background:var(--card2)}
-  .th{width:58px;height:58px;flex:none;border-radius:10px;background:#fff;object-fit:contain}
-  .hero{background:#fff;border-radius:16px;height:200px;display:flex;align-items:center;justify-content:center;margin-top:12px;overflow:hidden}
-  .hero img{max-height:190px;max-width:100%;object-fit:contain}
-  .item .n{font-weight:600} .item .s{font-size:12.5px;color:var(--sub);margin-top:2px}
-  .pill{margin-left:auto;text-align:right;min-width:54px}
-  .pill b{font-size:18px;display:block} .pill small{color:var(--sub);font-size:11px}
-  .warn{color:var(--bad)}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:none}
-  .chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer}
-  .chip.on{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+
+  /* catálogo de modelos */
+  .cat{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+  @media(min-width:640px){.cat{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.cat{grid-template-columns:repeat(4,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s}
+  .card:active{transform:scale(.98)}
+  .ph{aspect-ratio:1/1;background:var(--foto);display:flex;align-items:center;justify-content:center;position:relative}
+  .ph img{width:86%;height:86%;object-fit:contain;mix-blend-mode:multiply}
+  .ph .nf{color:#888;font-size:12px}
+  .badge{position:absolute;top:8px;right:8px;background:rgba(14,14,15,.85);color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:3px 9px}
+  .badge.low{background:var(--bad)}
+  .info{padding:10px 12px 12px}
+  .info .n{font-weight:600;font-size:14px;line-height:1.25}
+  .dots{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+  .cd{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+  .info .s{font-size:11.5px;color:var(--sub);margin-top:6px}
+
+  /* detalle */
+  .hero{background:var(--foto);border-radius:18px;aspect-ratio:4/3;max-height:300px;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .hero img{height:88%;width:88%;object-fit:contain;mix-blend-mode:multiply}
+  .colores{display:flex;gap:8px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}
+  .colores::-webkit-scrollbar{display:none}
+  .col{flex:none;width:76px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:5px;cursor:pointer;text-align:center;color:var(--txt)}
+  .col.on{border-color:var(--acc)}
+  .col .mini{background:var(--foto);border-radius:9px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
+  .col .mini img{width:88%;height:88%;object-fit:contain;mix-blend-mode:multiply}
+  .col .cn{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .col .cq{font-size:11px;color:var(--sub)}
+  .resumen{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;color:var(--sub);font-size:13px}
+  .resumen b{color:var(--txt);font-size:16px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
   @media(min-width:520px){.grid{grid-template-columns:repeat(4,1fr)}}
   @media(min-width:800px){.grid{grid-template-columns:repeat(6,1fr)}}
   .cell{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;text-align:center}
@@ -58,25 +79,32 @@
   .btns button{flex:1;height:38px;border-radius:10px;border:0;font-size:20px;font-weight:700;cursor:pointer;background:var(--card2);color:var(--txt)}
   .btns button.plus{background:var(--acc);color:#111}
   .btns button:active{transform:scale(.95)}
-  .section-t{font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 6px}
-  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,18,20,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  .tip{color:var(--sub);font-size:12.5px;margin-top:14px}
+
+  /* listas */
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px}
+  .th{width:52px;height:52px;flex:none;border-radius:10px;background:var(--foto);display:flex;align-items:center;justify-content:center}
+  .th img{width:88%;height:88%;object-fit:contain;mix-blend-mode:multiply}
+  .item .n{font-weight:600} .item .s{font-size:12.5px;color:var(--sub);margin-top:2px}
+  .pill{margin-left:auto;text-align:right;min-width:48px}
+  .pill b{font-size:18px;display:block} .pill small{color:var(--sub);font-size:11px}
+  .warn{color:var(--bad)}
+  .mov .c{font-weight:700;min-width:40px;text-align:center}
+  .mov .c.p{color:var(--ok)} .mov .c.m{color:var(--bad)}
+  .form{display:grid;gap:10px;margin-top:10px}
+  .btn{background:var(--acc);color:#111;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer}
+
+  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,18,20,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
   nav button{flex:1;background:none;border:0;color:var(--sub);font-size:11px;padding:6px 0;cursor:pointer}
   nav button i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}
   nav button.on{color:var(--acc)}
-  .mov{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px}
-  .mov .c{font-weight:700;min-width:44px;text-align:center}
-  .mov .c.p{color:var(--ok)} .mov .c.m{color:var(--bad)}
-  .mov .d{font-size:12px;color:var(--sub)}
-  .form{display:grid;gap:10px;margin-top:10px}
-  .btn{background:var(--acc);color:#111;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer}
-  .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9;max-width:90%}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9;max-width:90%}
   .toast.show{opacity:1}
   .empty{color:var(--sub);text-align:center;padding:40px 0}
-  .tot{display:flex;justify-content:space-between;color:var(--sub);font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
-<header id="hdr"></header>
+<header><div class="hin" id="hdr"></div></header>
 <main id="app"><div class="empty">Cargando inventario…</div></main>
 <nav>
   <button data-v="modelos" class="on"><i>👢</i>Modelos</button>
@@ -97,6 +125,40 @@ async function llamar(accion, ...args){
   return j.data;
 }
 
+/* ---------- fotos (carpeta fotos/) ---------- */
+const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+// Foto general de cada modelo
+const FOTO_MODELO = {
+  'bota-fusion':'png','bota-race-white':'png','bota-militar':'png','botin-force':'png','botin-urban-soft':'png',
+  'botin-force-industrial':'png','botin-sport':'png','bota-race':'png','botin-street':'png','bota-ingeniero-nobuck':'webp',
+  'bota-ingeniero-lona':'png','bota-ingeniero':'webp','bota-basica-industrial':'webp','bota-militar-motorizada':'webp',
+  'bota-motorizada-media-cana':'webp','bota-motorizada-cana-alta-elite':'webp','botin-urban':'webp','botin-urban-flex':'webp',
+  'botin-urban-go':'webp','bota-touring-race':'png'
+};
+// Foto por color (modelo--color)
+const FOTO_COLOR = {};
+[
+ 'bota-race-white--azul-celeste.png','bota-race-white--gris.png','bota-race-white--morado.png','bota-race-white--naranja.png','bota-race-white--neon.png',
+ 'botin-urban-soft--rojo.png','botin-urban-soft--azul.png','botin-urban-soft--gris.png','botin-urban-soft--fucsia.png','botin-urban-soft--neon.png',
+ 'botin-sport--azul-oscuro.png','botin-sport--fucsia.png','botin-sport--gris.png','botin-sport--neon.png','botin-sport--rojo.png',
+ 'bota-race--rojo.png','bota-race--azul-oscuro.png','bota-race--fucsia.png','bota-race--gris.png','bota-race--neon.png',
+ 'botin-street--rojo.png','botin-street--azul-oscuro.png','botin-street--fucsia.png','botin-street--gris.png','botin-street--neon.png',
+ 'bota-ingeniero-lona--cafe.png','bota-ingeniero-lona--negro.png','bota-ingeniero--cafe.png','bota-ingeniero--negro.webp',
+ 'bota-basica-industrial--cafe.jpeg','bota-basica-industrial--negro.webp',
+ 'botin-urban--rojo.png','botin-urban--azul.png','botin-urban--fucsia.png','botin-urban--gris.png','botin-urban--neon.png',
+ 'bota-touring-race--rojo.png','bota-touring-race--azul.png','bota-touring-race--fucsia.png','bota-touring-race--gris.png','bota-touring-race--neon.png'
+].forEach(f=>{ FOTO_COLOR[f.replace(/\.[a-z]+$/,'')] = 'fotos/'+f; });
+function foto(modelo, color){
+  const m = slug(modelo);
+  if(color && FOTO_COLOR[m+'--'+slug(color)]) return FOTO_COLOR[m+'--'+slug(color)];
+  return FOTO_MODELO[m] ? 'fotos/'+m+'.'+FOTO_MODELO[m] : '';
+}
+const img = (src, alt='') => src ? `<img loading="lazy" src="${src}" alt="${esc(alt)}">` : '<span class="nf">Sin foto</span>';
+// Color para los puntos
+const TONO = {negro:'#111',cafe:'#6B4423',gris:'#8E8E93',azul:'#1E5BD8','azul-oscuro':'#1B2A6B','azul-celeste':'#6EC6F0',
+  fucsia:'#E0218A',neon:'#C6F21C',rojo:'#D7261E',morado:'#7B3FB8',naranja:'#F07A1A',blanco:'#fff',verde:'#2E8B57'};
+const tono = c => TONO[slug(c)] || '#555';
+
 let S = { filas:[], vista:'modelos', modelo:null, color:null, q:'', pend:0 };
 const $ = s => document.querySelector(s);
 const fmt = n => n.toLocaleString('es-CO');
@@ -111,25 +173,23 @@ async function cargar(silencioso){
   try{
     if(S.pend) return;
     const r = await llamar('obtenerInventario');
-    if(S.pend) return; // no pisar cambios en curso
+    if(S.pend) return;
     S.filas = r.filas; S.err=false; render();
   }catch(e){ S.err=true; estado(); if(!silencioso) toast('Error al cargar: '+(e.message||e)); }
 }
 
-/* ---------- agrupaciones ---------- */
 function modelos(){
   const m = new Map();
   S.filas.forEach(f=>{
-    if(!m.has(f.modelo)) m.set(f.modelo,{modelo:f.modelo,pares:0,colores:new Set(),bajos:0,precio:f.precio});
-    const o=m.get(f.modelo); o.pares+=f.pares; o.colores.add(f.color); if(f.pares<f.minimo) o.bajos++;
+    if(!m.has(f.modelo)) m.set(f.modelo,{modelo:f.modelo,pares:0,colores:[],bajos:0,precio:f.precio});
+    const o=m.get(f.modelo); o.pares+=f.pares; if(!o.colores.includes(f.color)) o.colores.push(f.color); if(f.pares<f.minimo) o.bajos++;
   });
   return [...m.values()];
 }
 
-/* ---------- vistas ---------- */
 function header(html){ $('#hdr').innerHTML = html; estado(); }
 function cabecera(titulo, extra=''){
-  return `<div class="top"><div><img class="logo" src="data:image/webp;base64,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" alt="HGR Higher"><h1>${titulo}</h1></div>
+  return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
   <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div>${extra}`;
 }
 
@@ -138,6 +198,7 @@ function render(){
   ({modelos:vModelos, detalle:vDetalle, alertas:vAlertas, movs:vMovs, nuevo:vNuevo})[S.vista]();
 }
 
+/* ---------- catálogo ---------- */
 function vModelos(){
   const ms = modelos();
   const totPares = ms.reduce((a,b)=>a+b.pares,0);
@@ -149,75 +210,50 @@ function vModelos(){
       <div class="stat"><b>${fmt(totPares)}</b><span>pares en total</span></div>
       <div class="stat"><b>$${(totValor/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})}M</b><span>valor a precio web</span></div>
       <div class="stat"><b class="${bajos?'warn':''}">${bajos}</b><span>tallas bajo mínimo</span></div>
-    </div><div class="list" id="lista"></div>`;
+    </div><div class="cat" id="lista"></div>`;
   pintarLista();
 }
-/* ---------- fotos de cada modelo (carpeta fotos/ del repositorio) ---------- */
-const URL_FOTOS = 'fotos/';
-const FOTOS = {
-  'bota fusion':'bota-fusion.png',
-  'bota race white':'bota-race-white.png',
-  'bota militar':'bota-militar.png',
-  'botin force':'botin-force.png',
-  'botin urban soft':'botin-urban-soft.png',
-  'botin force industrial':'botin-force-industrial.png',
-  'botin sport':'botin-sport.png',
-  'bota race':'bota-race.png',
-  'botin street':'botin-street.png',
-  'bota ingeniero nobuck':'bota-ingeniero-nobuck.webp',
-  'bota ingeniero lona':'bota-ingeniero-lona.png',
-  'bota ingeniero':'bota-ingeniero.webp',
-  'bota basica industrial':'bota-basica-industrial.webp',
-  'bota militar motorizada':'bota-militar-motorizada.webp',
-  'bota motorizada media cana':'bota-motorizada-media-cana.webp',
-  'bota motorizada cana alta elite':'bota-motorizada-cana-alta-elite.webp',
-  'botin urban':'botin-urban.webp',
-  'botin urban flex':'botin-urban-flex.webp',
-  'botin urban go':'botin-urban-go.webp',
-  'bota touring race':'bota-touring-race.png'
-};
-function foto(modelo){
-  const k = String(modelo).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-  return FOTOS[k] ? URL_FOTOS + FOTOS[k] : '';
-}
-
 function pintarLista(){
-  const q = S.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const norm = s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const ms = modelos().filter(m=>!q || norm(m.modelo).includes(q) || [...m.colores].some(c=>norm(c).includes(q)));
+  const q = slug(S.q);
+  const ms = modelos().filter(m=>!q || slug(m.modelo).includes(q) || m.colores.some(c=>slug(c).includes(q)));
   $('#lista').innerHTML = ms.length ? ms.map(m=>`
-    <div class="item" data-m="${esc(m.modelo)}">
-      ${foto(m.modelo) ? `<img class="th" loading="lazy" src="${foto(m.modelo)}" alt="">` : '<div class="th"></div>'}
-      <div><div class="n">${esc(m.modelo)}</div>
-      <div class="s">${[...m.colores].map(esc).join(' · ')}</div></div>
-      <div class="pill"><b>${fmt(m.pares)}</b><small class="${m.bajos?'warn':''}">${m.bajos?m.bajos+' bajo mín.':'pares'}</small></div>
-    </div>`).join('') : '<div class="empty">No hay resultados</div>';
-  document.querySelectorAll('.item').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=null; S.vista='detalle'; render(); scrollTo(0,0); });
+    <div class="card" data-m="${esc(m.modelo)}">
+      <div class="ph">${img(foto(m.modelo), m.modelo)}<span class="badge ${m.pares===0?'low':''}">${fmt(m.pares)}</span></div>
+      <div class="info">
+        <div class="n">${esc(m.modelo)}</div>
+        <div class="dots">${m.colores.map(c=>`<span class="cd" title="${esc(c)}" style="background:${tono(c)}"></span>`).join('')}</div>
+        <div class="s">${m.colores.length} ${m.colores.length===1?'color':'colores'} · ${plata(m.precio)}</div>
+      </div>
+    </div>`).join('') : '<div class="empty" style="grid-column:1/-1">No hay resultados</div>';
+  document.querySelectorAll('.card').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=null; S.vista='detalle'; render(); scrollTo(0,0); });
 }
 
+/* ---------- detalle de un modelo ---------- */
 function vDetalle(){
   const filas = S.filas.filter(f=>f.modelo===S.modelo);
   const colores = [...new Set(filas.map(f=>f.color))];
   if(!S.color || !colores.includes(S.color)) S.color = colores[0];
   const tot = filas.reduce((a,f)=>a+f.pares,0);
-  header(`<button class="back" id="atras">‹ Modelos</button>` + cabecera(esc(S.modelo),
-    `<div class="chips" style="margin-top:10px">${colores.map(c=>{
-      const n=filas.filter(f=>f.color===c).reduce((a,f)=>a+f.pares,0);
-      return `<button class="chip ${c===S.color?'on':''}" data-c="${esc(c)}">${esc(c)} · ${n}</button>`}).join('')}</div>`));
+  header(`<button class="back" id="atras">‹ Modelos</button>` + cabecera(esc(S.modelo)));
   $('#atras').onclick=()=>{ S.vista='modelos'; render(); };
-  document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
   const tallas = filas.filter(f=>f.color===S.color).sort((a,b)=>a.talla-b.talla);
   const totColor = tallas.reduce((a,f)=>a+f.pares,0);
-  const ft = foto(S.modelo);
-  $('#app').innerHTML = (ft ? `<div class="hero"><img src="${ft}" alt="${esc(S.modelo)}"></div>` : '') + `<div class="grid">${tallas.map(f=>`
+  $('#app').innerHTML = `
+    <div class="hero">${img(foto(S.modelo, S.color), S.modelo+' '+S.color)}</div>
+    ${colores.length>1 ? `<div class="colores">${colores.map(c=>{
+      const n=filas.filter(f=>f.color===c).reduce((a,f)=>a+f.pares,0);
+      return `<button class="col ${c===S.color?'on':''}" data-c="${esc(c)}">
+        <div class="mini">${img(foto(S.modelo,c), c)}</div>
+        <div class="cn">${esc(c)}</div><div class="cq">${n} pares</div></button>`}).join('')}</div>` : ''}
+    <div class="resumen"><span>${esc(S.color)}: <b>${fmt(totColor)}</b> pares</span><span>Total modelo: ${fmt(tot)} · ${plata(filas[0]?filas[0].precio:0)}</span></div>
+    <div class="grid">${tallas.map(f=>`
       <div class="cell ${f.pares<f.minimo?'low':''}" data-id="${esc(f.id)}">
         <div class="t">Talla ${f.talla}</div>
-        <div class="q" title="Toca para escribir la cantidad exacta">${f.pares}</div>
+        <div class="q">${f.pares}</div>
         <div class="btns"><button class="minus">−</button><button class="plus">+</button></div>
       </div>`).join('')}</div>
-    <div class="tot"><span>${esc(S.color)}: <b style="color:var(--txt)">${fmt(totColor)}</b> pares</span><span>Modelo: ${fmt(tot)} · ${plata(filas[0]?filas[0].precio:0)}</span></div>
-    <div class="section-t">Consejo</div>
-    <div style="color:var(--sub);font-size:13px">Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.</div>`;
+    <div class="tip">Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.</div>`;
+  document.querySelectorAll('.col').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
   document.querySelectorAll('.cell').forEach(c=>{
     const id=c.dataset.id;
     c.querySelector('.plus').onclick=()=>cambiar(id,1,false);
@@ -240,7 +276,6 @@ async function minimo(id){
   try{ await llamar('fijarMinimo',id,f.minimo); toast('Mínimo actualizado'); }catch(e){ toast('Error: '+(e.message||e)); }
 }
 
-// Cola: guarda los cambios en orden para que no se pierda ninguno
 let cola = Promise.resolve();
 function cambiar(id, valor, fijar){
   const f=S.filas.find(x=>x.id===id); const antes=f.pares;
@@ -254,38 +289,42 @@ function cambiar(id, valor, fijar){
     .finally(()=>{ S.pend--; if(S.vista==='detalle') render(); else estado(); });
 }
 
+/* ---------- bajo stock ---------- */
 function vAlertas(){
   header(cabecera('Bajo stock'));
   const b=S.filas.filter(f=>f.pares<f.minimo);
-  const g=new Map(); b.forEach(f=>{const k=f.modelo+' — '+f.color; if(!g.has(k)) g.set(k,[]); g.get(k).push(f);});
-  $('#app').innerHTML = b.length ? [...g.entries()].map(([k,fs])=>`
+  const g=new Map(); b.forEach(f=>{const k=f.modelo+'||'+f.color; if(!g.has(k)) g.set(k,[]); g.get(k).push(f);});
+  $('#app').innerHTML = b.length ? [...g.values()].map(fs=>`
     <div class="item" data-m="${esc(fs[0].modelo)}" data-c="${esc(fs[0].color)}">
-      <div><div class="n">${esc(k)}</div><div class="s">Tallas: ${fs.map(f=>`${f.talla} (${f.pares})`).join(', ')}</div></div>
+      <div class="th">${img(foto(fs[0].modelo, fs[0].color))}</div>
+      <div><div class="n">${esc(fs[0].modelo)}</div><div class="s">${esc(fs[0].color)} · Tallas: ${fs.map(f=>f.talla).join(', ')}</div></div>
       <div class="pill"><b class="warn">${fs.length}</b><small>tallas</small></div></div>`).join('')
     : '<div class="empty">Todo está por encima del mínimo 👍</div>';
-  if(b.length) $('#app').innerHTML = `<div class="list">${$('#app').innerHTML}</div>`;
-  document.querySelectorAll('.item').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); });
+  document.querySelectorAll('.item').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); scrollTo(0,0); });
 }
 
+/* ---------- movimientos ---------- */
 async function vMovs(){
   header(cabecera('Movimientos'));
   $('#app').innerHTML='<div class="empty">Cargando…</div>';
   try{
     const ms=await llamar('obtenerMovimientos',60);
     if(S.vista!=='movs') return;
-    $('#app').innerHTML = ms.length ? ms.map(m=>`<div class="mov">
-      <div class="c ${m.cambio>0?'p':'m'}">${m.cambio>0?'+':''}${m.cambio}</div>
-      <div style="flex:1"><div>${esc(m.modelo)} · ${esc(m.color)} · T${m.talla}</div>
-      <div class="d">${m.fecha} · quedan ${m.despues}${m.nota?' · '+esc(m.nota):''}</div></div></div>`).join('')
+    $('#app').innerHTML = ms.length ? ms.map(m=>`<div class="item mov">
+      <div class="th">${img(foto(m.modelo, m.color))}</div>
+      <div style="flex:1"><div class="n">${esc(m.modelo)}</div>
+      <div class="s">${esc(m.color)} · T${m.talla} · ${m.fecha} · quedan ${m.despues}${m.nota?' · '+esc(m.nota):''}</div></div>
+      <div class="c ${m.cambio>0?'p':'m'}">${m.cambio>0?'+':''}${m.cambio}</div></div>`).join('')
       : '<div class="empty">Aún no hay movimientos</div>';
   }catch(e){ $('#app').innerHTML='<div class="empty">No se pudieron cargar</div>'; }
 }
 
+/* ---------- agregar ---------- */
 function vNuevo(){
   header(cabecera('Agregar modelo o color'));
   const ms=modelos().map(m=>m.modelo);
   $('#app').innerHTML = `<div class="form">
-    <label class="d" style="color:var(--sub);font-size:13px">Modelo (escribe uno nuevo o uno existente para sumarle un color)</label>
+    <label style="color:var(--sub);font-size:13px">Modelo (escribe uno nuevo o uno existente para sumarle un color)</label>
     <input id="nm" list="lm" placeholder="Ej: Botín Urban"><datalist id="lm">${ms.map(m=>`<option value="${esc(m)}">`).join('')}</datalist>
     <input id="nc" placeholder="Color (ej: Verde)">
     <input id="np" type="number" inputmode="numeric" placeholder="Precio en COP (opcional)">
@@ -299,11 +338,8 @@ function vNuevo(){
 }
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ S.vista=b.dataset.v; render(); scrollTo(0,0); });
-
-/* ---------- sincronización: recarga cada 20 s y al volver a la app ---------- */
 setInterval(()=>{ if(!document.hidden && (S.vista==='modelos'||S.vista==='detalle'||S.vista==='alertas')) cargar(true); }, 20000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) cargar(true); });
-
 cargar();
 </script>
 </body>
