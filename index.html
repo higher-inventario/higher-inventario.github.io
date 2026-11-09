@@ -152,29 +152,29 @@ function vModelos(){
     </div><div class="list" id="lista"></div>`;
   pintarLista();
 }
-/* ---------- fotos de cada modelo (tomadas de higherboots.com) ---------- */
-const URL_FOTOS = 'https://higherboots.com/wp-content/uploads/';
+/* ---------- fotos de cada modelo (carpeta fotos/ del repositorio) ---------- */
+const URL_FOTOS = 'fotos/';
 const FOTOS = {
-  'bota fusion':'2026/08/6-2-300x300.png',
-  'bota race white':'2026/08/Bota-Race-White-1-300x300.png',
-  'bota militar':'2026/03/1-300x300.png',
-  'botin force':'2026/02/1-15-300x300.png',
-  'botin urban soft':'2026/02/1-14-scaled-300x300.png',
-  'botin force industrial':'2026/02/1-16-300x300.png',
-  'botin sport':'2026/02/1-10-300x300.png',
-  'bota race':'2026/02/1-5-300x300.png',
-  'botin street':'2026/02/1-300x300.png',
-  'bota ingeniero nobuck':'2025/05/BOTA-INGENIERO-NOBUCK_0227-300x300.webp',
-  'bota ingeniero lona':'2025/05/DSC_0101-Editar-300x300.png',
-  'bota ingeniero':'2025/05/BOTA-INGENIERO-NEGRA_0207-300x300.webp',
-  'bota basica industrial':'2025/05/BOTA-BASICA-INDUSTRIAL_0223-300x300.webp',
-  'bota militar motorizada':'2025/05/BOTA-MILITAR-MOTORIZADA_0063-300x300.webp',
-  'bota motorizada media cana':'2025/05/BOTA-MOTORIZADA-MEDIA-CANA_0126-300x300.webp',
-  'bota motorizada cana alta elite':'2025/05/BOTA-CANA-ALTA-ELITE_0032-300x300.webp',
-  'botin urban':'2025/05/BOTIN-URBAN-BOA-NEON_0171--300x300.webp',
-  'botin urban flex':'2025/05/BOTIN-URBAN-SOFT_0050-300x300.webp',
-  'botin urban go':'2025/05/BOTIN-URBAN-CORDON_0151-300x300.webp',
-  'bota touring race':'2025/05/1-2-300x300.png'
+  'bota fusion':'bota-fusion.png',
+  'bota race white':'bota-race-white.png',
+  'bota militar':'bota-militar.png',
+  'botin force':'botin-force.png',
+  'botin urban soft':'botin-urban-soft.png',
+  'botin force industrial':'botin-force-industrial.png',
+  'botin sport':'botin-sport.png',
+  'bota race':'bota-race.png',
+  'botin street':'botin-street.png',
+  'bota ingeniero nobuck':'bota-ingeniero-nobuck.webp',
+  'bota ingeniero lona':'bota-ingeniero-lona.png',
+  'bota ingeniero':'bota-ingeniero.webp',
+  'bota basica industrial':'bota-basica-industrial.webp',
+  'bota militar motorizada':'bota-militar-motorizada.webp',
+  'bota motorizada media cana':'bota-motorizada-media-cana.webp',
+  'bota motorizada cana alta elite':'bota-motorizada-cana-alta-elite.webp',
+  'botin urban':'botin-urban.webp',
+  'botin urban flex':'botin-urban-flex.webp',
+  'botin urban go':'botin-urban-go.webp',
+  'bota touring race':'bota-touring-race.png'
 };
 function foto(modelo){
   const k = String(modelo).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
