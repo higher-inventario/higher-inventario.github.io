@@ -160,8 +160,10 @@ const API = 'https://script.google.com/macros/s/AKfycbzmtdVVl3ptvrOrlAo2PoKHOk1a
 let PIN = '', ROL = '';
 try { PIN = localStorage.getItem('pinHGR') || ''; ROL = localStorage.getItem('rolHGR') || ''; } catch(e) {}
 function guardarSesion(p, r){ PIN = p || ''; ROL = r || ''; try { if(p){ localStorage.setItem('pinHGR', p); localStorage.setItem('rolHGR', r); } else { localStorage.removeItem('pinHGR'); localStorage.removeItem('rolHGR'); } } catch(e) {} }
-const NOMBRE_ROL = { admin:'Administrador', bodega:'Bodega', mp:'Materia prima', ventas:'Ventas' };
-const soloVer = () => ROL==='ventas';
+const NOMBRE_ROL = { admin:'Administrador', bodega:'Bodega', mp:'Materia prima', ventas:'Ventas', jefes:'Jefes' };
+// Ventas y Jefes solo consultan; Jefes y el administrador ven las dos secciones
+const soloVer = () => ROL==='ventas' || ROL==='jefes';
+const veAmbas = () => ROL==='admin' || ROL==='jefes';
 
 async function llamar(accion, ...args){
   const r = await fetch(API, { method:'POST', body: JSON.stringify({accion, args, pin: PIN}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
@@ -220,7 +222,7 @@ const ROLES_LOGIN = [
   ['bodega','👢','Bodega','Botas terminadas'],
   ['mp','📦','Materia prima','Materiales de producción'],
   ['ventas','🏷️','Ventas','Consultar existencias'],
-  ['admin','🔑','Administrador','Acceso completo']
+  ['jefes','👔','Jefes','Ver bodega y materia prima']
 ];
 function vLogin(){
   $('#cab').style.display='none'; $('#nav').style.display='none';
@@ -250,7 +252,8 @@ function vPin(rol){
     try{
       const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'login', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
       const j = await r.json();
-      if(j.ok && j.data === rol){ guardarSesion(p, j.data); enviando=false; return iniciar(); }
+      if(j.ok && (j.data === rol || j.data === 'admin')){  /* el PIN del administrador es código maestro: entra por cualquier recuadro */
+        guardarSesion(p, j.data); enviando=false; return iniciar(); }
       toast('PIN incorrecto'); inp.value=''; pintar();
       const c=$('.cajas'); c.classList.remove('error'); void c.offsetWidth; c.classList.add('error');
     }catch(e){ toast('Sin conexión'); }
@@ -273,7 +276,9 @@ function iniciar(){
   if(!PIN || !ROL) return vLogin();
   $('#cab').style.display=''; $('#nav').style.display='';
   if(ROL==='bodega' || ROL==='ventas') S.sec='bodega';
-  if(soloVer() && ['movs','nuevo'].includes(S.vista)) S.vista='modelos';
+  if(ROL==='ventas' && ['movs','nuevo'].includes(S.vista)) S.vista='modelos';
+  if(soloVer() && S.vista==='nuevo') S.vista='modelos';
+  if(soloVer() && S.vista==='mpNuevo') S.vista='mpLista';
   if(ROL==='mp') S.sec='mp';
   if(S.sec==='mp' && !['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='mpLista';
   if(S.sec==='bodega' && ['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='modelos';
@@ -282,10 +287,11 @@ function iniciar(){
 }
 
 function pintarNav(){
-  const items = soloVer() ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock']]
+  let items = ROL==='ventas' ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock']]
     : S.sec==='bodega'
     ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock'],['movs','🕑','Movimientos'],['nuevo','＋','Agregar']]
     : [['mpLista','📦','Materiales'],['mpAlertas','⚠️','Por agotarse'],['mpMovs','🕑','Movimientos'],['mpNuevo','＋','Agregar']];
+  if(soloVer()) items = items.filter(x=>x[0]!=='nuevo' && x[0]!=='mpNuevo');
   $('#nav').innerHTML = items.map(([v,i,t])=>`<button data-v="${v}" class="${S.vista===v||(S.vista==='detalle'&&v==='modelos')?'on':''}"><i>${i}</i>${t}</button>`).join('');
   document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{ S.vista=b.dataset.v; render(); scrollTo(0,0); });
 }
@@ -304,7 +310,7 @@ function header(html){ $('#hdr').innerHTML = html; estado();
   document.querySelectorAll('.secs button').forEach(b=>b.onclick=()=>{ if(S.sec===b.dataset.s) return; S.sec=b.dataset.s; S.vista = S.sec==='bodega'?'modelos':'mpLista'; iniciar(); });
 }
 function cabecera(titulo, extra=''){
-  const secs = ROL==='admin' ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button></div>` : '';
+  const secs = veAmbas() ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button></div>` : '';
   return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
   <div class="der"><button class="rol on" id="salir">${NOMBRE_ROL[ROL]||''} · Salir</button>
   <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${secs}${extra}`;
@@ -473,9 +479,10 @@ function tarjetaMp(x){
     <div class="fila">${fm?`<div class="th ${/insignia/.test(fm)?'ancho':''}">${img(fm, x.material)}</div>`:''}<div><div class="n">${esc(x.material)}</div>
       <div class="s">${esc(x.categoria)} · mínimo ${fmt(x.minimo)} ${esc(x.unidad)}</div></div>
       <div class="cant"><b class="${x.cantidad<x.minimo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div></div>
-    <div class="acc"><button class="bin">＋ Entrada</button><button class="bout">− Salida</button></div></div>`;
+    ${soloVer() ? '' : '<div class="acc"><button class="bin">＋ Entrada</button><button class="bout">− Salida</button></div>'}</div>`;
 }
 function enlazarMp(){
+  if(soloVer()) return;
   document.querySelectorAll('.mp').forEach(el=>{
     const id=el.dataset.id;
     el.querySelector('.bin').onclick=()=>movMp(id, 1);
@@ -508,7 +515,7 @@ function pintarMp(){
   const g = new Map(); xs.forEach(x=>{ if(!g.has(x.categoria)) g.set(x.categoria, []); g.get(x.categoria).push(x); });
   $('#lista').innerHTML = xs.length ? [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>
     `<div class="cat-t">${esc(c)}</div>` + arr.sort((a,b)=>a.material.localeCompare(b.material)).map(tarjetaMp).join('')).join('')
-    + '<div class="tip">Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.</div>'
+    + `<div class="tip">${soloVer() ? 'Modo consulta: puedes ver las existencias, pero no hacer cambios.' : 'Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.'}</div>`
     : '<div class="empty">No hay resultados</div>';
   enlazarMp();
 }
@@ -559,7 +566,7 @@ async function vMpMovs(){
     if(S.vista!=='mpMovs') return;
     $('#app').innerHTML = ms.length ? ms.map(m=>`<div class="item mov" style="cursor:default">
       <div style="flex:1"><div class="n">${esc(m.material)} <span class="tipo ${esc(m.tipo)}">${esc(m.tipo)}</span></div>
-      <div class="s">${m.fecha} · quedan ${fmt(m.despues)} ${esc(m.unidad)}${m.nota?' · '+esc(m.nota):''}${ROL==='admin'&&m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div>
+      <div class="s">${m.fecha} · quedan ${fmt(m.despues)} ${esc(m.unidad)}${m.nota?' · '+esc(m.nota):''}${veAmbas()&&m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div>
       <div class="c ${m.cambio>0?'p':'m'}">${m.cambio>0?'+':''}${fmt(m.cambio)}</div></div>`).join('')
       : '<div class="empty">Aún no hay movimientos</div>';
   }catch(e){ $('#app').innerHTML='<div class="empty">No se pudieron cargar</div>'; }
