@@ -135,6 +135,7 @@
   .mp .fila{display:flex;align-items:center;gap:10px}
   .mp .th{width:58px;height:58px;overflow:hidden}
   .mp .th img{width:100%;height:100%;object-fit:cover;mix-blend-mode:normal}
+  .mp .th.ancho{width:104px;height:40px;border-radius:8px}
   .mp .n{font-weight:600}
   .mp .s{font-size:12px;color:var(--sub);margin-top:2px}
   .mp .cant{margin-left:auto;text-align:right;cursor:pointer}
@@ -463,11 +464,13 @@ function vNuevo(){
 /* ================= MATERIA PRIMA ================= */
 // Fotos de materia prima (carpeta fotos/mp/), por nombre del material
 const FOTOS_MP = new Set(["banana-blanca", "banana-fucsia", "banana-gris", "banana-naranja", "banana-neon", "banana-roja", "hgr-redonda-grande-y-pequena-fucsia", "hgr-redonda-grande-y-pequena-negra", "hgr-redonda-grande-y-pequena-neon", "insignia-de-aventura-en-blanco", "insignia-de-aventura-en-blanco-morada", "insignia-de-aventura-en-blanco-y-fucsia", "insignia-de-aventura-en-blanco-y-gris", "insignia-de-aventura-en-blanco-y-negro", "insignia-de-aventura-en-blanco-y-rojo", "insignia-de-aventura-en-neon", "molde-hgr-correa-superficial-fucsia", "molde-hgr-correa-superficial-negra", "molde-hgr-correa-superficial-neon", "molde-hgr-correa-superficial-roja", "molde-punta-correa-touring-blanca", "molde-punta-correa-touring-fucsia", "molde-punta-correa-touring-gris", "molde-punta-correa-touring-morada", "molde-punta-correa-touring-negra", "molde-punta-correa-touring-neon", "molde-punta-correa-touring-roja"]);
-const fotoMp = m => FOTOS_MP.has(slug(m)) ? 'fotos/mp/'+slug(m)+'.webp' : '';
+// Grande y pequeña comparten foto; los cauchos usan la foto del molde
+const claveFotoMp = m => slug(m).replace(/^caucho-/,'molde-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1');
+const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=2' : '';
 function tarjetaMp(x){
   const fm = fotoMp(x.material);
   return `<div class="mp ${x.cantidad<x.minimo?'low':''}" data-id="${esc(x.id)}">
-    <div class="fila">${fm?`<div class="th">${img(fm, x.material)}</div>`:''}<div><div class="n">${esc(x.material)}</div>
+    <div class="fila">${fm?`<div class="th ${/insignia/.test(fm)?'ancho':''}">${img(fm, x.material)}</div>`:''}<div><div class="n">${esc(x.material)}</div>
       <div class="s">${esc(x.categoria)} · mínimo ${fmt(x.minimo)} ${esc(x.unidad)}</div></div>
       <div class="cant"><b class="${x.cantidad<x.minimo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div></div>
     <div class="acc"><button class="bin">＋ Entrada</button><button class="bout">− Salida</button></div></div>`;
