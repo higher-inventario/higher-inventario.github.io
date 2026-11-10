@@ -105,57 +105,61 @@
   .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9;max-width:90%}
   .toast.show{opacity:1}
   .empty{color:var(--sub);text-align:center;padding:40px 0}
+  /* login */
+  .login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+  .login img{height:70px;margin-bottom:18px}
+  .login h2{margin:0 0 6px;font-size:20px}
+  .login p{color:var(--sub);margin:0 0 18px;font-size:14px}
+  .login input{max-width:260px;text-align:center;font-size:24px;letter-spacing:.3em}
+  .login .btn{width:100%;max-width:260px;margin-top:12px}
+  /* secciones (solo administrador) */
+  .secs{display:flex;gap:6px;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px}
+  .secs button{flex:1;border:0;background:none;color:var(--sub);padding:9px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .secs button.on{background:var(--acc);color:#111}
+  /* materia prima */
+  .cat-t{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px}
+  .mp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+  .mp.low{border-color:rgba(239,68,68,.55);background:rgba(239,68,68,.07)}
+  .mp .fila{display:flex;align-items:center;gap:10px}
+  .mp .n{font-weight:600}
+  .mp .s{font-size:12px;color:var(--sub);margin-top:2px}
+  .mp .cant{margin-left:auto;text-align:right;cursor:pointer}
+  .mp .cant b{font-size:22px} .mp .cant small{color:var(--sub);font-size:12px;margin-left:3px}
+  .mp .acc{display:flex;gap:8px;margin-top:10px}
+  .mp .acc button{flex:1;height:38px;border-radius:10px;border:0;font-weight:700;font-size:14px;cursor:pointer}
+  .bin{background:var(--ok);color:#06210f} .bout{background:var(--card2);color:var(--txt)}
+  .tipo{font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px}
+  .tipo.Entrada{background:rgba(34,197,94,.15);color:var(--ok)} .tipo.Salida{background:rgba(239,68,68,.15);color:var(--bad)} .tipo.Conteo{background:rgba(245,179,0,.15);color:var(--acc)}
 </style>
 </head>
 <body>
-<header><div class="hin" id="hdr"></div></header>
-<main id="app"><div class="empty">Cargando inventario…</div></main>
-<nav>
-  <button data-v="modelos" class="on"><i>👢</i>Modelos</button>
-  <button data-v="alertas"><i>⚠️</i>Bajo stock</button>
-  <button data-v="movs"><i>🕑</i>Movimientos</button>
-  <button data-v="nuevo"><i>＋</i>Agregar</button>
-</nav>
+<header id="cab"><div class="hin" id="hdr"></div></header>
+<main id="app"><div class="empty">Cargando…</div></main>
+<nav id="nav"></nav>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ---------- conexión con la hoja de Google (Apps Script) ---------- */
 const API = 'https://script.google.com/macros/s/AKfycbzmtdVVl3ptvrOrlAo2PoKHOk1atA1fhul5sgtPWr2By91VU4bqt2r1ZEyuXi4OV3MQNw/exec';
-/* Modo encargado: solo con PIN se puede cargar/descargar. El resto solo ve. */
-let PIN = '';
-try { PIN = localStorage.getItem('pinHGR') || ''; } catch(e) {}
-const esEncargado = () => !!PIN;
-function guardarPin(p){ PIN = p || ''; try { p ? localStorage.setItem('pinHGR', p) : localStorage.removeItem('pinHGR'); } catch(e) {} }
+// Roles: admin (todo), bodega (botas terminadas), mp (materia prima). Cada uno entra con su PIN.
+let PIN = '', ROL = '';
+try { PIN = localStorage.getItem('pinHGR') || ''; ROL = localStorage.getItem('rolHGR') || ''; } catch(e) {}
+function guardarSesion(p, r){ PIN = p || ''; ROL = r || ''; try { if(p){ localStorage.setItem('pinHGR', p); localStorage.setItem('rolHGR', r); } else { localStorage.removeItem('pinHGR'); localStorage.removeItem('rolHGR'); } } catch(e) {} }
+const NOMBRE_ROL = { admin:'Administrador', bodega:'Bodega', mp:'Materia prima' };
 
 async function llamar(accion, ...args){
   const r = await fetch(API, { method:'POST', body: JSON.stringify({accion, args, pin: PIN}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
   if(!r.ok) throw new Error('Sin conexión ('+r.status+')');
   const j = await r.json();
   if(!j.ok){
-    if(/PIN incorrecto/.test(j.error)){ guardarPin(''); setTimeout(render, 0); }
+    if(/PIN incorrecto/.test(j.error)){ guardarSesion('', ''); setTimeout(iniciar, 0); }
     throw new Error(j.error);
   }
   return j.data;
 }
 
-async function entrarEncargado(){
-  if(esEncargado()){
-    if(confirm('¿Salir del modo encargado? Quedarás solo viendo el inventario.')){ guardarPin(''); if(S.vista==='nuevo') S.vista='modelos'; render(); toast('Modo solo lectura'); }
-    return;
-  }
-  const p = prompt('PIN del encargado:');
-  if(!p) return;
-  try{
-    const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'verificarPin', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
-    const j = await r.json();
-    if(j.ok && j.data){ guardarPin(p); render(); toast('Modo encargado activado'); }
-    else toast('PIN incorrecto');
-  }catch(e){ toast('Sin conexión'); }
-}
-
 /* ---------- fotos (carpeta fotos/) ---------- */
 const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-// Foto general de cada modelo
 const FOTO_MODELO = {
   'bota-fusion':'png','bota-race-white':'png','bota-militar':'png','botin-force':'png','botin-urban-soft':'png',
   'botin-force-industrial':'png','botin-sport':'png','bota-race':'png','botin-street':'png','bota-ingeniero-nobuck':'webp',
@@ -163,7 +167,6 @@ const FOTO_MODELO = {
   'bota-motorizada-media-cana':'webp','bota-motorizada-cana-alta-elite':'webp','botin-urban':'webp','botin-urban-flex':'webp',
   'botin-urban-go':'webp','bota-touring-race':'png'
 };
-// Foto por color (modelo--color)
 const FOTO_COLOR = {};
 [
  'bota-race-white--azul-celeste.png','bota-race-white--gris.png','bota-race-white--morado.png','bota-race-white--naranja.png','bota-race-white--neon.png',
@@ -182,30 +185,95 @@ function foto(modelo, color){
   return FOTO_MODELO[m] ? 'fotos/'+m+'.'+FOTO_MODELO[m] : '';
 }
 const img = (src, alt='') => src ? `<img loading="lazy" src="${src}" alt="${esc(alt)}">` : '<span class="nf">Sin foto</span>';
-// Color para los puntos
 const TONO = {negro:'#111',cafe:'#6B4423',gris:'#8E8E93',azul:'#1E5BD8','azul-oscuro':'#1B2A6B','azul-celeste':'#6EC6F0',
   fucsia:'#E0218A',neon:'#C6F21C',rojo:'#D7261E',morado:'#7B3FB8',naranja:'#F07A1A',blanco:'#fff',verde:'#2E8B57'};
 const tono = c => TONO[slug(c)] || '#555';
 
-let S = { filas:[], vista:'modelos', modelo:null, color:null, q:'', pend:0 };
+let S = { sec:'bodega', filas:[], mp:[], vista:'modelos', modelo:null, color:null, q:'', pend:0 };
 const $ = s => document.querySelector(s);
-const fmt = n => n.toLocaleString('es-CO');
+const fmt = n => Number(n).toLocaleString('es-CO', {maximumFractionDigits:3});
 const plata = n => '$' + Math.round(n).toLocaleString('es-CO');
 const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1800); }
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2200); }
 function estado(){ const d=$('.dot'), l=$('#syncTxt'); if(!d) return;
   d.className='dot'+(S.err?' err':S.pend?' busy':''); l.textContent=S.err?'Sin conexión':S.pend?'Guardando…':'Sincronizado'; }
 
-async function cargar(silencioso){
-  try{
-    if(S.pend) return;
-    const r = await llamar('obtenerInventario');
-    if(S.pend) return;
-    S.filas = r.filas; S.err=false; render();
-  }catch(e){ S.err=true; estado(); if(!silencioso) toast('Error al cargar: '+(e.message||e)); }
+/* ---------- inicio de sesión ---------- */
+function vLogin(){
+  $('#cab').style.display='none'; $('#nav').style.display='none';
+  $('#app').innerHTML = `<div class="login">
+    <img src="logo.png" alt="HGR Higher">
+    <h2>Inventario Higher</h2>
+    <p>Escribe tu PIN para entrar</p>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
+    <button class="btn" id="entrar">Entrar</button></div>`;
+  const go = async()=>{
+    const p = $('#pin').value.trim(); if(!p) return;
+    $('#entrar').disabled = true; $('#entrar').textContent = 'Verificando…';
+    try{
+      const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'login', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+      const j = await r.json();
+      if(j.ok && j.data){ guardarSesion(p, j.data); iniciar(); }
+      else { toast('PIN incorrecto'); $('#pin').value=''; }
+    }catch(e){ toast('Sin conexión'); }
+    const b=$('#entrar'); if(b){ b.disabled=false; b.textContent='Entrar'; }
+  };
+  $('#entrar').onclick = go;
+  $('#pin').onkeydown = e=>{ if(e.key==='Enter') go(); };
+  setTimeout(()=>$('#pin')&&$('#pin').focus(), 100);
+}
+function salir(){
+  if(!confirm('¿Cerrar sesión en este celular?')) return;
+  guardarSesion('', ''); S.filas=[]; S.mp=[]; iniciar();
 }
 
+function iniciar(){
+  if(!PIN || !ROL) return vLogin();
+  $('#cab').style.display=''; $('#nav').style.display='';
+  if(ROL==='bodega') S.sec='bodega';
+  if(ROL==='mp') S.sec='mp';
+  if(S.sec==='mp' && !['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='mpLista';
+  if(S.sec==='bodega' && ['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='modelos';
+  $('#app').innerHTML='<div class="empty">Cargando…</div>';
+  pintarNav(); cargar();
+}
+
+function pintarNav(){
+  const items = S.sec==='bodega'
+    ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock'],['movs','🕑','Movimientos'],['nuevo','＋','Agregar']]
+    : [['mpLista','📦','Materiales'],['mpAlertas','⚠️','Por agotarse'],['mpMovs','🕑','Movimientos'],['mpNuevo','＋','Agregar']];
+  $('#nav').innerHTML = items.map(([v,i,t])=>`<button data-v="${v}" class="${S.vista===v||(S.vista==='detalle'&&v==='modelos')?'on':''}"><i>${i}</i>${t}</button>`).join('');
+  document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{ S.vista=b.dataset.v; render(); scrollTo(0,0); });
+}
+
+async function cargar(silencioso){
+  try{
+    if(S.pend || !PIN) return;
+    if(S.sec==='bodega'){ const r = await llamar('obtenerInventario'); if(S.pend) return; S.filas = r.filas; }
+    else { const r = await llamar('mpObtener'); if(S.pend) return; S.mp = r; }
+    S.err=false; render();
+  }catch(e){ S.err=true; estado(); if(!silencioso) toast('Error: '+(e.message||e)); }
+}
+
+function header(html){ $('#hdr').innerHTML = html; estado();
+  const sb=$('#salir'); if(sb) sb.onclick=salir;
+  document.querySelectorAll('.secs button').forEach(b=>b.onclick=()=>{ if(S.sec===b.dataset.s) return; S.sec=b.dataset.s; S.vista = S.sec==='bodega'?'modelos':'mpLista'; iniciar(); });
+}
+function cabecera(titulo, extra=''){
+  const secs = ROL==='admin' ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button></div>` : '';
+  return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
+  <div class="der"><button class="rol on" id="salir">${NOMBRE_ROL[ROL]||''} · Salir</button>
+  <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${secs}${extra}`;
+}
+
+function render(){
+  pintarNav();
+  ({modelos:vModelos, detalle:vDetalle, alertas:vAlertas, movs:vMovs, nuevo:vNuevo,
+    mpLista:vMpLista, mpAlertas:vMpAlertas, mpMovs:vMpMovs, mpNuevo:vMpNuevo})[S.vista]();
+}
+
+/* ================= BODEGA (botas terminadas) ================= */
 function modelos(){
   const m = new Map();
   S.filas.forEach(f=>{
@@ -215,27 +283,12 @@ function modelos(){
   return [...m.values()];
 }
 
-function header(html){ $('#hdr').innerHTML = html; estado(); }
-function cabecera(titulo, extra=''){
-  return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
-  <div class="der"><button class="rol ${esEncargado()?'on':''}" onclick="entrarEncargado()">${esEncargado()?'🔓 Encargado':'🔒 Solo ver'}</button>
-  <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${extra}`;
-}
-
-function render(){
-  const bn = document.querySelector('nav button[data-v="nuevo"]'); if(bn) bn.style.display = esEncargado() ? '' : 'none';
-  if(S.vista==='nuevo' && !esEncargado()) S.vista='modelos';
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.vista || (S.vista==='detalle'&&b.dataset.v==='modelos')));
-  ({modelos:vModelos, detalle:vDetalle, alertas:vAlertas, movs:vMovs, nuevo:vNuevo})[S.vista]();
-}
-
-/* ---------- catálogo ---------- */
 function vModelos(){
   const ms = modelos();
   const totPares = ms.reduce((a,b)=>a+b.pares,0);
   const totValor = S.filas.reduce((a,f)=>a+f.pares*f.precio,0);
   const bajos = S.filas.filter(f=>f.pares<f.minimo).length;
-  header(cabecera('Inventario', `<div style="margin-top:10px"><input id="q" placeholder="Buscar modelo o color…" value="${esc(S.q)}"></div>`));
+  header(cabecera('Bodega', `<div style="margin-top:10px"><input id="q" placeholder="Buscar modelo o color…" value="${esc(S.q)}"></div>`));
   $('#q').oninput = e=>{ S.q=e.target.value; pintarLista(); };
   $('#app').innerHTML = `<div class="stats">
       <div class="stat"><b>${fmt(totPares)}</b><span>pares en total</span></div>
@@ -259,7 +312,6 @@ function pintarLista(){
   document.querySelectorAll('.card').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=null; S.vista='detalle'; render(); scrollTo(0,0); });
 }
 
-/* ---------- detalle de un modelo ---------- */
 function vDetalle(){
   const filas = S.filas.filter(f=>f.modelo===S.modelo);
   const colores = [...new Set(filas.map(f=>f.color))];
@@ -281,13 +333,10 @@ function vDetalle(){
       <div class="cell ${f.pares<f.minimo?'low':''}" data-id="${esc(f.id)}">
         <div class="t">Talla ${f.talla}</div>
         <div class="q">${f.pares}</div>
-        ${esEncargado() ? '<div class="btns"><button class="minus">−</button><button class="plus">+</button></div>' : ''}
+        <div class="btns"><button class="minus">−</button><button class="plus">+</button></div>
       </div>`).join('')}</div>
-    <div class="tip">${esEncargado()
-      ? 'Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.'
-      : 'Estás en modo solo lectura. Solo el encargado puede cargar o descargar pares.'}</div>`;
+    <div class="tip">Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.</div>`;
   document.querySelectorAll('.col').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
-  if(!esEncargado()) return;
   document.querySelectorAll('.cell').forEach(c=>{
     const id=c.dataset.id;
     c.querySelector('.plus').onclick=()=>cambiar(id,1,false);
@@ -323,7 +372,6 @@ function cambiar(id, valor, fijar){
     .finally(()=>{ S.pend--; if(S.vista==='detalle') render(); else estado(); });
 }
 
-/* ---------- bajo stock ---------- */
 function vAlertas(){
   header(cabecera('Bajo stock'));
   const b=S.filas.filter(f=>f.pares<f.minimo);
@@ -337,9 +385,8 @@ function vAlertas(){
   document.querySelectorAll('.item').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); scrollTo(0,0); });
 }
 
-/* ---------- movimientos ---------- */
 async function vMovs(){
-  header(cabecera('Movimientos'));
+  header(cabecera('Movimientos de bodega'));
   $('#app').innerHTML='<div class="empty">Cargando…</div>';
   try{
     const ms=await llamar('obtenerMovimientos',60);
@@ -353,7 +400,6 @@ async function vMovs(){
   }catch(e){ $('#app').innerHTML='<div class="empty">No se pudieron cargar</div>'; }
 }
 
-/* ---------- agregar ---------- */
 function vNuevo(){
   header(cabecera('Agregar modelo o color'));
   const ms=modelos().map(m=>m.modelo);
@@ -371,10 +417,126 @@ function vNuevo(){
   };
 }
 
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ S.vista=b.dataset.v; render(); scrollTo(0,0); });
-setInterval(()=>{ if(!document.hidden && (S.vista==='modelos'||S.vista==='detalle'||S.vista==='alertas')) cargar(true); }, 20000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) cargar(true); });
-cargar();
+/* ================= MATERIA PRIMA ================= */
+function tarjetaMp(x){
+  return `<div class="mp ${x.cantidad<x.minimo?'low':''}" data-id="${esc(x.id)}">
+    <div class="fila"><div><div class="n">${esc(x.material)}</div>
+      <div class="s">${esc(x.categoria)} · mínimo ${fmt(x.minimo)} ${esc(x.unidad)}</div></div>
+      <div class="cant"><b class="${x.cantidad<x.minimo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div></div>
+    <div class="acc"><button class="bin">＋ Entrada</button><button class="bout">− Salida</button></div></div>`;
+}
+function enlazarMp(){
+  document.querySelectorAll('.mp').forEach(el=>{
+    const id=el.dataset.id;
+    el.querySelector('.bin').onclick=()=>movMp(id, 1);
+    el.querySelector('.bout').onclick=()=>movMp(id, -1);
+    const c=el.querySelector('.cant'); let tm;
+    c.onclick=()=>{ if(c._lp){c._lp=false;return;} conteoMp(id); };
+    c.addEventListener('touchstart',()=>{tm=setTimeout(()=>{c._lp=true;minimoMp(id)},600)},{passive:true});
+    c.addEventListener('touchend',()=>clearTimeout(tm));
+    c.oncontextmenu=e=>{e.preventDefault();minimoMp(id)};
+  });
+}
+const num = v => Number(String(v).replace(',', '.'));
+
+function vMpLista(){
+  header(cabecera('Materia prima', `<div style="margin-top:10px"><input id="q" placeholder="Buscar material…" value="${esc(S.q)}"></div>`));
+  $('#q').oninput = e=>{ S.q=e.target.value; pintarMp(); };
+  const bajos = S.mp.filter(x=>x.cantidad<x.minimo).length;
+  const cats = new Set(S.mp.map(x=>x.categoria)).size;
+  $('#app').innerHTML = `<div class="stats">
+      <div class="stat"><b>${S.mp.length}</b><span>materiales</span></div>
+      <div class="stat"><b>${cats}</b><span>categorías</span></div>
+      <div class="stat"><b class="${bajos?'warn':''}">${bajos}</b><span>por agotarse</span></div>
+    </div><div id="lista"></div>`;
+  pintarMp();
+}
+function pintarMp(){
+  const q = slug(S.q);
+  const xs = S.mp.filter(x=>!q || slug(x.material).includes(q) || slug(x.categoria).includes(q));
+  if(!S.mp.length){ $('#lista').innerHTML = '<div class="empty">Aún no hay materiales.<br>Toca <b>＋ Agregar</b> abajo para crear el primero.</div>'; return; }
+  const g = new Map(); xs.forEach(x=>{ if(!g.has(x.categoria)) g.set(x.categoria, []); g.get(x.categoria).push(x); });
+  $('#lista').innerHTML = xs.length ? [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>
+    `<div class="cat-t">${esc(c)}</div>` + arr.sort((a,b)=>a.material.localeCompare(b.material)).map(tarjetaMp).join('')).join('')
+    + '<div class="tip">Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.</div>'
+    : '<div class="empty">No hay resultados</div>';
+  enlazarMp();
+}
+
+async function guardarMp(id, valor, fijar, nota){
+  const x=S.mp.find(y=>y.id===id); const antes=x.cantidad;
+  S.pend++; estado();
+  try{
+    const r = await llamar('mpAjustar', id, valor, fijar, nota||'');
+    x.cantidad = r.cantidad; S.err=false;
+    toast(fijar ? 'Conteo guardado' : (valor>0 ? `Entrada: +${fmt(valor)} ${x.unidad}` : `Salida: ${fmt(valor)} ${x.unidad}`));
+  }catch(e){ x.cantidad=antes; toast('No se guardó: '+(e.message||e)); }
+  finally{ S.pend--; render(); }
+}
+function movMp(id, signo){
+  const x=S.mp.find(y=>y.id===id);
+  const v = prompt(`${signo>0?'ENTRADA':'SALIDA'} de ${x.material}\n¿Cuántos ${x.unidad}? (hay ${fmt(x.cantidad)})`);
+  if(v===null || v.trim()==='' || isNaN(num(v)) || num(v)<=0) return;
+  const nota = prompt(signo>0 ? 'Nota (opcional): proveedor, factura…' : 'Nota (opcional): para qué modelo o lote…') || '';
+  guardarMp(id, signo*num(v), false, nota);
+}
+function conteoMp(id){
+  const x=S.mp.find(y=>y.id===id);
+  const v = prompt(`Conteo de ${x.material}\nCantidad exacta en ${x.unidad}:`, x.cantidad);
+  if(v===null || v.trim()==='' || isNaN(num(v)) || num(v)<0) return;
+  guardarMp(id, num(v), true, 'Conteo físico');
+}
+async function minimoMp(id){
+  const x=S.mp.find(y=>y.id===id);
+  const v = prompt(`Mínimo de alerta para ${x.material} (${x.unidad}):`, x.minimo);
+  if(v===null || v.trim()==='' || isNaN(num(v))) return;
+  x.minimo = Math.max(0, num(v)); render();
+  try{ await llamar('mpFijarMinimo', id, x.minimo); toast('Mínimo actualizado'); }catch(e){ toast('Error: '+(e.message||e)); }
+}
+
+function vMpAlertas(){
+  header(cabecera('Por agotarse'));
+  const xs = S.mp.filter(x=>x.cantidad<x.minimo);
+  $('#app').innerHTML = xs.length ? xs.map(tarjetaMp).join('') : '<div class="empty">Ningún material está por debajo del mínimo 👍</div>';
+  enlazarMp();
+}
+
+async function vMpMovs(){
+  header(cabecera('Movimientos de materia prima'));
+  $('#app').innerHTML='<div class="empty">Cargando…</div>';
+  try{
+    const ms=await llamar('mpMovimientos',80);
+    if(S.vista!=='mpMovs') return;
+    $('#app').innerHTML = ms.length ? ms.map(m=>`<div class="item mov" style="cursor:default">
+      <div style="flex:1"><div class="n">${esc(m.material)} <span class="tipo ${esc(m.tipo)}">${esc(m.tipo)}</span></div>
+      <div class="s">${m.fecha} · quedan ${fmt(m.despues)} ${esc(m.unidad)}${m.nota?' · '+esc(m.nota):''}${ROL==='admin'&&m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div>
+      <div class="c ${m.cambio>0?'p':'m'}">${m.cambio>0?'+':''}${fmt(m.cambio)}</div></div>`).join('')
+      : '<div class="empty">Aún no hay movimientos</div>';
+  }catch(e){ $('#app').innerHTML='<div class="empty">No se pudieron cargar</div>'; }
+}
+
+function vMpNuevo(){
+  header(cabecera('Agregar material'));
+  const cats=[...new Set(S.mp.map(x=>x.categoria).concat(['Cuero','Suelas','Hilos','Herrajes','Forros','Plantillas','Empaque','Químicos']))];
+  const unis=['m²','metros','pares','unidades','conos','kg','litros','rollos','láminas'];
+  $('#app').innerHTML = `<div class="form">
+    <input id="mm" placeholder="Material (ej: Cuero negro graso)">
+    <input id="mc" list="lc" placeholder="Categoría (ej: Cuero)"><datalist id="lc">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <input id="mu" list="lu" placeholder="Unidad (ej: m², pares, conos)"><datalist id="lu">${unis.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <input id="mq" inputmode="decimal" placeholder="Cantidad actual (opcional)">
+    <input id="mmin" inputmode="decimal" placeholder="Mínimo de alerta (opcional)">
+    <button class="btn" id="mg">Crear material</button></div>`;
+  $('#mg').onclick=async()=>{
+    try{ $('#mg').disabled=true;
+      await llamar('mpAgregar', $('#mm').value, $('#mc').value, $('#mu').value, num($('#mq').value||0), num($('#mmin').value||0));
+      toast('Material creado'); S.vista='mpLista'; await cargar(); }
+    catch(e){ toast(e.message||e); } finally{ const b=$('#mg'); if(b) b.disabled=false; }
+  };
+}
+
+setInterval(()=>{ if(!document.hidden && PIN && ['modelos','detalle','alertas','mpLista','mpAlertas'].includes(S.vista)) cargar(true); }, 20000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && PIN) cargar(true); });
+iniciar();
 </script>
 </body>
 </html>
