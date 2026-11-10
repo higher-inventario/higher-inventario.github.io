@@ -112,6 +112,18 @@
   .login p{color:var(--sub);margin:0 0 18px;font-size:14px}
   .login input{max-width:260px;text-align:center;font-size:24px;letter-spacing:.3em}
   .login .btn{width:100%;max-width:260px;margin-top:12px}
+  .roles{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:400px}
+  .rolbox{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 10px;color:var(--txt);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .12s,border-color .12s}
+  .rolbox:active{transform:scale(.97)} .rolbox:hover{border-color:var(--acc)}
+  .rolbox .ri{font-size:30px;margin-bottom:4px}
+  .rolbox b{font-size:15px} .rolbox small{color:var(--sub);font-size:11.5px}
+  .cajas{display:flex;gap:12px;justify-content:center;cursor:text}
+  .caja{width:54px;height:62px;border-radius:14px;background:var(--card2);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--txt)}
+  .caja.activa{border-color:var(--acc)} .caja.llena{border-color:#555}
+  .cajas.error{animation:sacudir .35s}
+  @keyframes sacudir{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-5px)}}
+  .oculto{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+  .volver{background:none;border:0;color:var(--sub);margin-top:16px;font-size:14px;cursor:pointer}
   /* secciones (solo administrador) */
   .secs{display:flex;gap:6px;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px}
   .secs button{flex:1;border:0;background:none;color:var(--sub);padding:9px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
@@ -201,28 +213,53 @@ function estado(){ const d=$('.dot'), l=$('#syncTxt'); if(!d) return;
   d.className='dot'+(S.err?' err':S.pend?' busy':''); l.textContent=S.err?'Sin conexión':S.pend?'Guardando…':'Sincronizado'; }
 
 /* ---------- inicio de sesión ---------- */
+const ROLES_LOGIN = [
+  ['bodega','👢','Bodega','Botas terminadas'],
+  ['mp','📦','Materia prima','Materiales de producción'],
+  ['ventas','🏷️','Ventas','Consultar existencias'],
+  ['admin','🔑','Administrador','Acceso completo']
+];
 function vLogin(){
   $('#cab').style.display='none'; $('#nav').style.display='none';
   $('#app').innerHTML = `<div class="login">
     <img src="logo.png" alt="HGR Higher">
     <h2>Inventario Higher</h2>
-    <p>Escribe tu PIN para entrar</p>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
-    <button class="btn" id="entrar">Entrar</button></div>`;
+    <p>¿Quién eres?</p>
+    <div class="roles">${ROLES_LOGIN.map(([r,i,t,d])=>`<button class="rolbox" data-r="${r}"><span class="ri">${i}</span><b>${t}</b><small>${d}</small></button>`).join('')}</div></div>`;
+  document.querySelectorAll('.rolbox').forEach(b=>b.onclick=()=>vPin(b.dataset.r));
+}
+function vPin(rol){
+  const info = ROLES_LOGIN.find(x=>x[0]===rol);
+  $('#app').innerHTML = `<div class="login">
+    <img src="logo.png" alt="HGR Higher">
+    <h2>${info[1]} ${info[2]}</h2>
+    <p>Escribe tu PIN</p>
+    <label class="cajas" for="pin">${[0,1,2,3].map(i=>`<span class="caja" data-i="${i}"></span>`).join('')}</label>
+    <input id="pin" class="oculto" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="4">
+    <button class="btn" id="entrar">Entrar</button>
+    <button class="volver" id="volver">‹ Cambiar de perfil</button></div>`;
+  const inp = $('#pin');
+  const pintar = ()=>{ const v=inp.value; document.querySelectorAll('.caja').forEach((c,i)=>{ c.textContent = v[i] ? '●' : ''; c.classList.toggle('llena', !!v[i]); c.classList.toggle('activa', i===Math.min(v.length,3)); }); };
+  let enviando=false;
   const go = async()=>{
-    const p = $('#pin').value.trim(); if(!p) return;
-    $('#entrar').disabled = true; $('#entrar').textContent = 'Verificando…';
+    const p = inp.value.trim(); if(p.length<4 || enviando) return;
+    enviando=true; $('#entrar').disabled = true; $('#entrar').textContent = 'Verificando…';
     try{
       const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'login', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
       const j = await r.json();
-      if(j.ok && j.data){ guardarSesion(p, j.data); iniciar(); }
-      else { toast('PIN incorrecto'); $('#pin').value=''; }
+      if(j.ok && j.data === rol){ guardarSesion(p, j.data); enviando=false; return iniciar(); }
+      toast('PIN incorrecto'); inp.value=''; pintar();
+      const c=$('.cajas'); c.classList.remove('error'); void c.offsetWidth; c.classList.add('error');
     }catch(e){ toast('Sin conexión'); }
-    const b=$('#entrar'); if(b){ b.disabled=false; b.textContent='Entrar'; }
+    enviando=false; const b=$('#entrar'); if(b){ b.disabled=false; b.textContent='Entrar'; }
+    inp.focus();
   };
+  inp.oninput = ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,4); pintar(); if(inp.value.length===4) go(); };
+  inp.onkeydown = e=>{ if(e.key==='Enter') go(); };
   $('#entrar').onclick = go;
-  $('#pin').onkeydown = e=>{ if(e.key==='Enter') go(); };
-  setTimeout(()=>$('#pin')&&$('#pin').focus(), 100);
+  $('#volver').onclick = vLogin;
+  $('.cajas').onclick = ()=>inp.focus();
+  pintar(); setTimeout(()=>inp.focus(), 100);
 }
 function salir(){
   if(!confirm('¿Cerrar sesión en este celular?')) return;
