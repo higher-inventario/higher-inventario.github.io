@@ -145,7 +145,8 @@ const API = 'https://script.google.com/macros/s/AKfycbzmtdVVl3ptvrOrlAo2PoKHOk1a
 let PIN = '', ROL = '';
 try { PIN = localStorage.getItem('pinHGR') || ''; ROL = localStorage.getItem('rolHGR') || ''; } catch(e) {}
 function guardarSesion(p, r){ PIN = p || ''; ROL = r || ''; try { if(p){ localStorage.setItem('pinHGR', p); localStorage.setItem('rolHGR', r); } else { localStorage.removeItem('pinHGR'); localStorage.removeItem('rolHGR'); } } catch(e) {} }
-const NOMBRE_ROL = { admin:'Administrador', bodega:'Bodega', mp:'Materia prima' };
+const NOMBRE_ROL = { admin:'Administrador', bodega:'Bodega', mp:'Materia prima', ventas:'Ventas' };
+const soloVer = () => ROL==='ventas';
 
 async function llamar(accion, ...args){
   const r = await fetch(API, { method:'POST', body: JSON.stringify({accion, args, pin: PIN}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
@@ -231,7 +232,8 @@ function salir(){
 function iniciar(){
   if(!PIN || !ROL) return vLogin();
   $('#cab').style.display=''; $('#nav').style.display='';
-  if(ROL==='bodega') S.sec='bodega';
+  if(ROL==='bodega' || ROL==='ventas') S.sec='bodega';
+  if(soloVer() && ['movs','nuevo'].includes(S.vista)) S.vista='modelos';
   if(ROL==='mp') S.sec='mp';
   if(S.sec==='mp' && !['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='mpLista';
   if(S.sec==='bodega' && ['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='modelos';
@@ -240,7 +242,8 @@ function iniciar(){
 }
 
 function pintarNav(){
-  const items = S.sec==='bodega'
+  const items = soloVer() ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock']]
+    : S.sec==='bodega'
     ? [['modelos','👢','Modelos'],['alertas','⚠️','Bajo stock'],['movs','🕑','Movimientos'],['nuevo','＋','Agregar']]
     : [['mpLista','📦','Materiales'],['mpAlertas','⚠️','Por agotarse'],['mpMovs','🕑','Movimientos'],['mpNuevo','＋','Agregar']];
   $('#nav').innerHTML = items.map(([v,i,t])=>`<button data-v="${v}" class="${S.vista===v||(S.vista==='detalle'&&v==='modelos')?'on':''}"><i>${i}</i>${t}</button>`).join('');
@@ -333,10 +336,11 @@ function vDetalle(){
       <div class="cell ${f.pares<f.minimo?'low':''}" data-id="${esc(f.id)}">
         <div class="t">Talla ${f.talla}</div>
         <div class="q">${f.pares}</div>
-        <div class="btns"><button class="minus">−</button><button class="plus">+</button></div>
+        ${soloVer() ? '' : '<div class="btns"><button class="minus">−</button><button class="plus">+</button></div>'}
       </div>`).join('')}</div>
-    <div class="tip">Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.</div>`;
+    <div class="tip">${soloVer() ? 'Modo consulta: puedes ver las existencias, pero no hacer cambios.' : 'Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.'}</div>`;
   document.querySelectorAll('.col').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
+  if(soloVer()) return;
   document.querySelectorAll('.cell').forEach(c=>{
     const id=c.dataset.id;
     c.querySelector('.plus').onclick=()=>cambiar(id,1,false);
