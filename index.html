@@ -28,6 +28,10 @@
   .sync{margin-left:auto;font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
   .dot.busy{background:var(--acc)} .dot.err{background:var(--bad)}
+  .der{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .der .sync{margin-left:0}
+  .rol{background:var(--card2);border:1px solid var(--line);color:var(--sub);border-radius:999px;padding:6px 11px;font-size:12px;cursor:pointer}
+  .rol.on{background:var(--acc);border-color:var(--acc);color:#111;font-weight:700}
   .back{background:none;border:0;color:var(--acc);font-size:15px;padding:0;margin-bottom:6px;cursor:pointer}
   input{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 12px;font-size:16px;outline:none}
   input:focus{border-color:var(--acc)}
@@ -117,12 +121,36 @@
 <script>
 /* ---------- conexión con la hoja de Google (Apps Script) ---------- */
 const API = 'https://script.google.com/macros/s/AKfycbzmtdVVl3ptvrOrlAo2PoKHOk1atA1fhul5sgtPWr2By91VU4bqt2r1ZEyuXi4OV3MQNw/exec';
+/* Modo encargado: solo con PIN se puede cargar/descargar. El resto solo ve. */
+let PIN = '';
+try { PIN = localStorage.getItem('pinHGR') || ''; } catch(e) {}
+const esEncargado = () => !!PIN;
+function guardarPin(p){ PIN = p || ''; try { p ? localStorage.setItem('pinHGR', p) : localStorage.removeItem('pinHGR'); } catch(e) {} }
+
 async function llamar(accion, ...args){
-  const r = await fetch(API, { method:'POST', body: JSON.stringify({accion, args}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+  const r = await fetch(API, { method:'POST', body: JSON.stringify({accion, args, pin: PIN}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
   if(!r.ok) throw new Error('Sin conexión ('+r.status+')');
   const j = await r.json();
-  if(!j.ok) throw new Error(j.error);
+  if(!j.ok){
+    if(/PIN incorrecto/.test(j.error)){ guardarPin(''); setTimeout(render, 0); }
+    throw new Error(j.error);
+  }
   return j.data;
+}
+
+async function entrarEncargado(){
+  if(esEncargado()){
+    if(confirm('¿Salir del modo encargado? Quedarás solo viendo el inventario.')){ guardarPin(''); if(S.vista==='nuevo') S.vista='modelos'; render(); toast('Modo solo lectura'); }
+    return;
+  }
+  const p = prompt('PIN del encargado:');
+  if(!p) return;
+  try{
+    const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'verificarPin', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+    const j = await r.json();
+    if(j.ok && j.data){ guardarPin(p); render(); toast('Modo encargado activado'); }
+    else toast('PIN incorrecto');
+  }catch(e){ toast('Sin conexión'); }
 }
 
 /* ---------- fotos (carpeta fotos/) ---------- */
@@ -190,10 +218,13 @@ function modelos(){
 function header(html){ $('#hdr').innerHTML = html; estado(); }
 function cabecera(titulo, extra=''){
   return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
-  <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div>${extra}`;
+  <div class="der"><button class="rol ${esEncargado()?'on':''}" onclick="entrarEncargado()">${esEncargado()?'🔓 Encargado':'🔒 Solo ver'}</button>
+  <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${extra}`;
 }
 
 function render(){
+  const bn = document.querySelector('nav button[data-v="nuevo"]'); if(bn) bn.style.display = esEncargado() ? '' : 'none';
+  if(S.vista==='nuevo' && !esEncargado()) S.vista='modelos';
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.vista || (S.vista==='detalle'&&b.dataset.v==='modelos')));
   ({modelos:vModelos, detalle:vDetalle, alertas:vAlertas, movs:vMovs, nuevo:vNuevo})[S.vista]();
 }
@@ -250,10 +281,13 @@ function vDetalle(){
       <div class="cell ${f.pares<f.minimo?'low':''}" data-id="${esc(f.id)}">
         <div class="t">Talla ${f.talla}</div>
         <div class="q">${f.pares}</div>
-        <div class="btns"><button class="minus">−</button><button class="plus">+</button></div>
+        ${esEncargado() ? '<div class="btns"><button class="minus">−</button><button class="plus">+</button></div>' : ''}
       </div>`).join('')}</div>
-    <div class="tip">Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.</div>`;
+    <div class="tip">${esEncargado()
+      ? 'Toca el número para escribir el conteo exacto. Mantén presionado el número para cambiar el mínimo de alerta.'
+      : 'Estás en modo solo lectura. Solo el encargado puede cargar o descargar pares.'}</div>`;
   document.querySelectorAll('.col').forEach(b=>b.onclick=()=>{ S.color=b.dataset.c; vDetalle(); });
+  if(!esEncargado()) return;
   document.querySelectorAll('.cell').forEach(c=>{
     const id=c.dataset.id;
     c.querySelector('.plus').onclick=()=>cambiar(id,1,false);
