@@ -130,18 +130,23 @@
   .secs button.on{background:var(--acc);color:#111}
   /* materia prima */
   .cat-t{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px}
-  .mp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
-  .mp.low{border-color:rgba(239,68,68,.55);background:rgba(239,68,68,.07)}
-  .mp .fila{display:flex;align-items:center;gap:10px}
-  .mp .th{width:58px;height:58px;overflow:hidden}
-  .mp .th img{width:100%;height:100%;object-fit:cover;mix-blend-mode:normal}
-  .mp .th.ancho{width:104px;height:40px;border-radius:8px}
-  .mp .n{font-weight:600}
-  .mp .s{font-size:12px;color:var(--sub);margin-top:2px}
-  .mp .cant{margin-left:auto;text-align:right;cursor:pointer}
-  .mp .cant b{font-size:22px} .mp .cant small{color:var(--sub);font-size:12px;margin-left:3px}
-  .mp .acc{display:flex;gap:8px;margin-top:10px}
-  .mp .acc button{flex:1;height:38px;border-radius:10px;border:0;font-weight:700;font-size:14px;cursor:pointer}
+  .mpgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:640px){.mpgrid{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.mpgrid{grid-template-columns:repeat(4,1fr)}}
+  .mp{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .mp.low{border-color:rgba(239,68,68,.6)}
+  .mp .ft{position:relative;aspect-ratio:4/3;background:#2a2a2d;display:flex;align-items:center;justify-content:center}
+  .mp .ft img{width:100%;height:100%;object-fit:cover}
+  .mp .ft.ancho img{object-fit:contain;padding:6px}
+  .mp .ft .nf{color:#777;font-size:12px}
+  .mp .alerta{position:absolute;top:8px;left:8px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px}
+  .mp .cuerpo{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .mp .n{font-weight:700;font-size:15px;line-height:1.2}
+  .mp .s{font-size:11.5px;color:var(--sub)}
+  .mp .cant{cursor:pointer;display:flex;align-items:baseline;gap:4px}
+  .mp .cant b{font-size:26px} .mp .cant small{color:var(--sub);font-size:12px}
+  .mp .acc{display:flex;gap:6px;margin-top:auto}
+  .mp .acc button{flex:1;height:38px;border-radius:10px;border:0;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;padding:0 4px}
   .bin{background:var(--ok);color:#06210f} .bout{background:var(--card2);color:var(--txt)}
   .tipo{font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px}
   .tipo.Entrada{background:rgba(34,197,94,.15);color:var(--ok)} .tipo.Salida{background:rgba(239,68,68,.15);color:var(--bad)} .tipo.Conteo{background:rgba(245,179,0,.15);color:var(--acc)}
@@ -473,13 +478,22 @@ const FOTOS_MP = new Set(["hgr-redonda-grande-y-pequena-naranja", "hgr-redonda-g
 // Grande y pequeña comparten foto; los cauchos usan la foto del molde
 const claveFotoMp = m => slug(m).replace(/^caucho-(hgr-correa-superficial|punta-correa-touring)-/,'molde-$1-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1').replace(/^banana-(grande|pequena)-/,'banana-');
 const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=2' : '';
+// Nombre corto: si el material empieza con el nombre del grupo, se muestra solo lo que cambia (p. ej. el color)
+function nombreCorto(x){
+  const m = String(x.material), c = String(x.categoria||'');
+  if(c && m.toLowerCase().startsWith(c.toLowerCase()+' ')){ const r = m.slice(c.length+1); return r.charAt(0).toUpperCase()+r.slice(1); }
+  return m;
+}
 function tarjetaMp(x){
-  const fm = fotoMp(x.material);
-  return `<div class="mp ${x.cantidad<x.minimo?'low':''}" data-id="${esc(x.id)}">
-    <div class="fila">${fm?`<div class="th ${/insignia|kids-talon/.test(fm)?'ancho':''}">${img(fm, x.material)}</div>`:''}<div><div class="n">${esc(x.material)}</div>
-      <div class="s">${esc(x.categoria)} · mínimo ${fmt(x.minimo)} ${esc(x.unidad)}</div></div>
-      <div class="cant"><b class="${x.cantidad<x.minimo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div></div>
-    ${soloVer() ? '' : '<div class="acc"><button class="bin">＋ Entrada</button><button class="bout">− Salida</button></div>'}</div>`;
+  const fm = fotoMp(x.material), bajo = x.cantidad < x.minimo;
+  return `<div class="mp ${bajo?'low':''}" data-id="${esc(x.id)}">
+    <div class="ft ${/insignia|kids-talon/.test(fm)?'ancho':''}">${img(fm, x.material)}${bajo?'<span class="alerta">Bajo mínimo</span>':''}</div>
+    <div class="cuerpo">
+      <div class="n">${esc(nombreCorto(x))}</div>
+      <div class="cant" title="Toca para escribir el conteo exacto"><b class="${bajo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div>
+      <div class="s">Mínimo ${fmt(x.minimo)} ${esc(x.unidad)}</div>
+      ${soloVer() ? '' : '<div class="acc"><button class="bin">Entrada</button><button class="bout">Salida</button></div>'}
+    </div></div>`;
 }
 function enlazarMp(){
   if(soloVer()) return;
@@ -514,7 +528,7 @@ function pintarMp(){
   if(!S.mp.length){ $('#lista').innerHTML = '<div class="empty">Aún no hay materiales.<br>Toca <b>＋ Agregar</b> abajo para crear el primero.</div>'; return; }
   const g = new Map(); xs.forEach(x=>{ if(!g.has(x.categoria)) g.set(x.categoria, []); g.get(x.categoria).push(x); });
   $('#lista').innerHTML = xs.length ? [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>
-    `<div class="cat-t">${esc(c)}</div>` + arr.sort((a,b)=>a.material.localeCompare(b.material)).map(tarjetaMp).join('')).join('')
+    `<div class="cat-t">${esc(c)}</div><div class="mpgrid">` + arr.sort((a,b)=>a.material.localeCompare(b.material)).map(tarjetaMp).join('') + '</div>').join('')
     + `<div class="tip">${soloVer() ? 'Modo consulta: puedes ver las existencias, pero no hacer cambios.' : 'Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.'}</div>`
     : '<div class="empty">No hay resultados</div>';
   enlazarMp();
@@ -554,7 +568,7 @@ async function minimoMp(id){
 function vMpAlertas(){
   header(cabecera('Por agotarse'));
   const xs = S.mp.filter(x=>x.cantidad<x.minimo);
-  $('#app').innerHTML = xs.length ? xs.map(tarjetaMp).join('') : '<div class="empty">Ningún material está por debajo del mínimo 👍</div>';
+  $('#app').innerHTML = xs.length ? '<div class="mpgrid">' + xs.map(x=>tarjetaMp({...x, categoria:''})).join('') + '</div>' : '<div class="empty">Ningún material está por debajo del mínimo 👍</div>';
   enlazarMp();
 }
 
@@ -581,11 +595,11 @@ function vMpNuevo(){
     <input id="mc" list="lc" placeholder="Categoría (ej: Cuero)"><datalist id="lc">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
     <input id="mu" list="lu" placeholder="Unidad (ej: m², pares, conos)"><datalist id="lu">${unis.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
     <input id="mq" inputmode="decimal" placeholder="Cantidad actual (opcional)">
-    <input id="mmin" inputmode="decimal" placeholder="Mínimo de alerta (opcional)">
+    <input id="mmin" inputmode="decimal" placeholder="Mínimo de alerta (si lo dejas vacío: 24)">
     <button class="btn" id="mg">Crear material</button></div>`;
   $('#mg').onclick=async()=>{
     try{ $('#mg').disabled=true;
-      await llamar('mpAgregar', $('#mm').value, $('#mc').value, $('#mu').value, num($('#mq').value||0), num($('#mmin').value||0));
+      await llamar('mpAgregar', $('#mm').value, $('#mc').value, $('#mu').value, num($('#mq').value||0), num($('#mmin').value||24));
       toast('Material creado'); S.vista='mpLista'; await cargar(); }
     catch(e){ toast(e.message||e); } finally{ const b=$('#mg'); if(b) b.disabled=false; }
   };
