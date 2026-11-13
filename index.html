@@ -138,12 +138,14 @@
   .tile.low{border-color:#5a1d1d}
   .tf{position:relative;aspect-ratio:1/1;background:#f3f3f1;display:flex;align-items:center;justify-content:center}
   .tf img{width:100%;height:100%;object-fit:cover}
-  .tf .gbajo{position:absolute;top:8px;left:8px}
+  .tf .gbajo{position:absolute;top:8px;left:8px;z-index:2}
   .tf.ico,.chf.ico{background:linear-gradient(140deg,rgba(255,255,255,.22),rgba(0,0,0,.38)),var(--c);color:#fff;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
   .tf.ico{aspect-ratio:4/3}
-  .ico .ini{font-size:46px;font-weight:800;letter-spacing:.02em;text-shadow:0 2px 10px rgba(0,0,0,.25);z-index:1}
-  .ico .icn{position:absolute;right:-14px;bottom:-14px;width:96px;height:96px;opacity:.28}
-  .chf.ico{width:84px;height:84px;aspect-ratio:auto}.chf.ico .ini{font-size:30px}.chf.ico .icn{width:60px;height:60px;right:-10px;bottom:-10px}
+  .tf.ico::before,.chf.ico::before{content:"";position:absolute;inset:0;background:url(logo.png) center/130% no-repeat;opacity:.07;transform:rotate(-12deg) scale(1.3)}
+  .tf.ico img.hgr,.chf.ico img.hgr{height:auto;object-fit:contain;position:relative}
+  .ico .hgr{width:62%;max-width:190px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));z-index:1}
+  .ico .ini{position:absolute;right:10px;bottom:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px);font-size:13px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:8px;z-index:1}
+  .chf.ico{width:84px;height:84px;aspect-ratio:auto}.chf.ico .hgr{width:78%}.chf.ico .ini{display:none}
   .tile:hover .tf.ico{filter:brightness(1.08)}
   .tt{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--acc)}
   .tt b{font-size:15px;line-height:1.2}.tt small{color:var(--sub);font-size:12px}
@@ -566,7 +568,7 @@ function vMpLista(){
   pintarMp();
 }
 // Portadas de categoría: ícono + iniciales con un color fijo por grupo
-const PALETA_CAT = ['#E4572E','#29A0B1','#7B61FF','#E0A100','#2EC4B6','#D84393','#4C8DFF','#43A047','#FF8A3D','#9C6ADE','#00A3A3'];
+const PALETA_CAT = ['#1E5BD8','#0F8B8D','#6A3FB8','#2E7D32','#B8860B','#00838F','#3949AB','#7B1FA2','#455A64','#00695C','#8D6E63'];
 function colorCat(c){ const l=[...new Set(S.mp.map(x=>x.categoria))].sort((a,b)=>a.localeCompare(b)); const i=Math.max(0,l.indexOf(c)); return PALETA_CAT[i % PALETA_CAT.length]; }
 function inicialesCat(c){
   const p = String(c).split(/\s+/).filter(w=>w && !/^(de|del|la|el|y|para|tipo|en|los|las)$/i.test(w));
@@ -578,8 +580,7 @@ const ICONOS_CAT = {
   pieza:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>'
 };
 function iconoCat(c){
-  const k = /suela/i.test(c) ? 'suela' : /hgr|insignia|adventure/i.test(c) ? 'hgr' : 'pieza';
-  return `<span class="ini">${esc(inicialesCat(c))}</span><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONOS_CAT[k]}</svg>`;
+  return `<img class="hgr" src="logo.png" alt="HGR"><span class="ini">${esc(inicialesCat(c))}</span>`;
 }
 function pintarMp(){
   const q = slug(S.q);
