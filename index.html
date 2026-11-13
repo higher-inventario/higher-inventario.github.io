@@ -130,17 +130,27 @@
   .secs button.on{background:var(--acc);color:#111}
   /* materia prima */
   .cat-t{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px}
-  details.grp{background:#1c1c1f;border:1px solid #2c2c30;border-radius:14px;margin:10px 0;overflow:hidden}
-  details.grp>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;user-select:none}
-  details.grp>summary::-webkit-details-marker{display:none}
-  .gfoto{width:52px;height:52px;border-radius:10px;background:#2a2a2d;overflow:hidden;flex:none}
-  .gfoto img{width:100%;height:100%;object-fit:cover}
-  .gtx{flex:1;min-width:0;display:flex;flex-direction:column}
-  .gtx b{font-size:16px}.gtx small{color:var(--sub);font-size:12px;margin-top:2px}
-  .gbajo{background:#5a1d1d;color:#ff8a80;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
-  .gflecha{font-size:24px;color:var(--sub);transition:transform .2s;line-height:1}
-  details.grp[open] .gflecha{transform:rotate(90deg)}
-  details.grp .mpgrid{padding:0 10px 12px}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(min-width:640px){.tiles{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.tiles{grid-template-columns:repeat(4,1fr)}}
+  .tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .15s,border-color .15s;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .tile:hover,.tile:focus-visible{transform:translateY(-2px);border-color:var(--acc)}
+  .tile.low{border-color:#5a1d1d}
+  .tf{position:relative;aspect-ratio:1/1;background:#f3f3f1;display:flex;align-items:center;justify-content:center}
+  .tf img{width:100%;height:100%;object-fit:cover}
+  .tf .gbajo{position:absolute;top:8px;left:8px}
+  .tt{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--acc)}
+  .tt b{font-size:15px;line-height:1.2}.tt small{color:var(--sub);font-size:12px}
+  .gbajo{display:inline-block;background:#5a1d1d;color:#ff8a80;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
+  .volver{all:unset;cursor:pointer;color:var(--acc);font-weight:600;padding:6px 0;margin-bottom:6px}
+  .cathead{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:12px}
+  .cathead h2{margin:0 0 4px;font-size:20px}.cathead p{margin:0 0 6px;color:var(--sub);font-size:13px}
+  .chf{width:110px;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:#f3f3f1;flex:none}
+  .chf.alta{width:96px;aspect-ratio:3/4}
+  .chf img{width:100%;height:100%;object-fit:cover}
+  @media(min-width:900px){.mpgrid.compacta{grid-template-columns:repeat(5,1fr)}}
+  .mp.sf{position:relative}.mp.sf .cuerpo{padding-top:12px}
+  .alerta2{position:absolute;top:8px;right:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px}
   .mpgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
   @media(min-width:640px){.mpgrid{grid-template-columns:repeat(3,1fr)}}
   @media(min-width:900px){.mpgrid{grid-template-columns:repeat(4,1fr)}}
@@ -488,7 +498,7 @@ function vNuevo(){
 // Fotos de materia prima (carpeta fotos/mp/), por nombre del material
 const FOTOS_MP = new Set(["suela-para-modelo-sport", "suela-casco", "suela-para-modelos-touring", "suela-trump", "suela-sprint-brazil", "suela-2289", "suela-tipo-ingeniero", "canillera", "pantorrilla", "talon", "banana-negra", "hgr-redonda-grande-y-pequena-morada", "caucho-adventure-negro", "hgr-redonda-grande-y-pequena-blanca", "insignia-de-aventura-blanca", "insignia-de-aventura-gris-oscuro", "insignia-de-aventura-naranja", "banana-morada", "banana-amarilla", "banana-azul", "molde-punta-correa-touring-azul", "molde-punta-correa-touring-naranja", "hgr-redonda-grande-y-pequena-naranja", "hgr-redonda-grande-y-pequena-azul", "hgr-redonda-grande-y-pequena-roja", "hgr-redonda-grande-y-pequena-gris", "caucho-kids-canilla-morado", "caucho-kids-talon-rosado", "caucho-street-azul", "caucho-talon-street-rojo", "banana-blanca", "banana-fucsia", "banana-gris", "banana-naranja", "banana-neon", "banana-roja", "hgr-redonda-grande-y-pequena-fucsia", "hgr-redonda-grande-y-pequena-negra", "hgr-redonda-grande-y-pequena-neon", "insignia-de-aventura-en-blanco", "insignia-de-aventura-en-blanco-morada", "insignia-de-aventura-en-blanco-y-fucsia", "insignia-de-aventura-en-blanco-y-gris", "insignia-de-aventura-en-blanco-y-negro", "insignia-de-aventura-en-blanco-y-rojo", "insignia-de-aventura-en-neon", "molde-hgr-correa-superficial-fucsia", "molde-hgr-correa-superficial-negra", "molde-hgr-correa-superficial-neon", "molde-hgr-correa-superficial-roja", "molde-punta-correa-touring-blanca", "molde-punta-correa-touring-fucsia", "molde-punta-correa-touring-gris", "molde-punta-correa-touring-morada", "molde-punta-correa-touring-negra", "molde-punta-correa-touring-neon", "molde-punta-correa-touring-roja"]);
 // Grande y pequeña comparten foto; los cauchos usan la foto del molde
-const claveFotoMp = m => slug(m).replace(/^caucho-(hgr-correa-superficial|punta-correa-touring)-/,'molde-$1-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1').replace(/^banana-(grande|pequena)-/,'banana-').replace(/^(canillera|pantorrilla|talon)-(grande|pequena|pequeno)$/,'$1').replace(/^caucho-pantorrilla-touring-(grande|pequena|pequeno)$/,'pantorrilla').replace(/^caucho-talon-urban-y-touring-(grande|pequena|pequeno)$/,'talon').replace(/^insignia-de-aventura-negro$/,'insignia-de-aventura-gris-oscuro');
+const claveFotoMp = m => slug(m).replace(/^(suela-.*)-talla-\d+$/,'$1').replace(/^caucho-(hgr-correa-superficial|punta-correa-touring)-/,'molde-$1-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1').replace(/^banana-(grande|pequena)-/,'banana-').replace(/^(canillera|pantorrilla|talon)-(grande|pequena|pequeno)$/,'$1').replace(/^caucho-pantorrilla-touring-(grande|pequena|pequeno)$/,'pantorrilla').replace(/^caucho-talon-urban-y-touring-(grande|pequena|pequeno)$/,'talon').replace(/^insignia-de-aventura-negro$/,'insignia-de-aventura-gris-oscuro');
 const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=3' : '';
 // Nombre corto: si el material empieza con el nombre del grupo, se muestra solo lo que cambia (p. ej. el color)
 function nombreCorto(x){
@@ -496,10 +506,10 @@ function nombreCorto(x){
   if(c && m.toLowerCase().startsWith(c.toLowerCase()+' ')){ const r = m.slice(c.length+1); return r.charAt(0).toUpperCase()+r.slice(1); }
   return m;
 }
-function tarjetaMp(x){
+function tarjetaMp(x, sinFoto){
   const fm = fotoMp(x.material), bajo = x.cantidad < x.minimo;
-  return `<div class="mp ${bajo?'low':''}" data-id="${esc(x.id)}">
-    <div class="ft ${/insignia|kids-talon|adventure/.test(fm)?'ancho':''} ${/\/suela-/.test(fm)?'alta':''}">${img(fm, x.material)}${bajo?'<span class="alerta">Bajo mínimo</span>':''}</div>
+  return `<div class="mp ${bajo?'low':''} ${sinFoto?'sf':''}" data-id="${esc(x.id)}">
+    ${sinFoto ? (bajo?'<span class="alerta2">Bajo mínimo</span>':'') : `<div class="ft ${/insignia|kids-talon|adventure/.test(fm)?'ancho':''} ${/\/suela-/.test(fm)?'alta':''}">${img(fm, x.material)}${bajo?'<span class="alerta">Bajo mínimo</span>':''}</div>`}
     <div class="cuerpo">
       <div class="n">${esc(nombreCorto(x))}</div>
       <div class="cant" title="Toca para escribir el conteo exacto"><b class="${bajo?'warn':''}">${fmt(x.cantidad)}</b><small>${esc(x.unidad)}</small></div>
@@ -539,20 +549,31 @@ function pintarMp(){
   const xs = S.mp.filter(x=>!q || slug(x.material).includes(q) || slug(x.categoria).includes(q));
   if(!S.mp.length){ $('#lista').innerHTML = '<div class="empty">Aún no hay materiales.<br>Toca <b>＋ Agregar</b> abajo para crear el primero.</div>'; return; }
   const g = new Map(); xs.forEach(x=>{ if(!g.has(x.categoria)) g.set(x.categoria, []); g.get(x.categoria).push(x); });
-  S.abiertos = S.abiertos || new Set();
-  $('#lista').innerHTML = xs.length ? [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>{
-    const b = arr.filter(x=>x.cantidad<x.minimo).length, total = arr.reduce((t,x)=>t+x.cantidad,0);
-    const f = arr.map(x=>fotoMp(x.material)).find(Boolean);
-    const abierto = q || S.abiertos.has(c);
-    return `<details class="grp" data-c="${esc(c)}" ${abierto?'open':''}><summary>
-      <span class="gfoto">${f?`<img src="${f}" alt="" loading="lazy">`:''}</span>
-      <span class="gtx"><b>${esc(c)}</b><small>${arr.length} ${arr.length===1?'referencia':'referencias'} · ${fmt(total)} en total</small></span>
-      ${b?`<span class="gbajo">${b} bajo mínimo</span>`:''}<span class="gflecha">›</span></summary>
-      <div class="mpgrid">` + arr.sort((a,b)=>a.material.localeCompare(b.material)).map(tarjetaMp).join('') + '</div></details>';
-  }).join('')
-    + `<div class="tip">${soloVer() ? 'Modo consulta: puedes ver las existencias, pero no hacer cambios.' : 'Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.'}</div>`
-    : '<div class="empty">No hay resultados</div>';
-  document.querySelectorAll('details.grp').forEach(d=>d.addEventListener('toggle',()=>{ if(q) return; d.open ? S.abiertos.add(d.dataset.c) : S.abiertos.delete(d.dataset.c); }));
+  const orden = arr => arr.sort((a,b)=>a.material.localeCompare(b.material,'es',{numeric:true}));
+  const tip = `<div class="tip">${soloVer() ? 'Modo consulta: puedes ver las existencias, pero no hacer cambios.' : 'Toca la cantidad para escribir el conteo exacto. Mantén presionada la cantidad para cambiar el mínimo de alerta.'}</div>`;
+  const resumen = arr => ({ b: arr.filter(x=>x.cantidad<x.minimo).length, total: arr.reduce((t,x)=>t+x.cantidad,0), f: arr.map(x=>fotoMp(x.material)).find(Boolean) || '' });
+  const unaFoto = arr => arr.length>1 && new Set(arr.map(x=>fotoMp(x.material))).size===1;
+  if(!xs.length){ $('#lista').innerHTML = '<div class="empty">No hay resultados</div>'; return; }
+  if(q){
+    $('#lista').innerHTML = [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>
+      `<div class="cat-t">${esc(c)}</div><div class="mpgrid">` + orden(arr).map(x=>tarjetaMp(x, unaFoto(arr))).join('') + '</div>').join('') + tip;
+  } else if(S.mpCat && g.has(S.mpCat)){
+    const arr = g.get(S.mpCat), r = resumen(arr), uf = unaFoto(arr);
+    $('#lista').innerHTML = `<button class="volver" id="volver">‹ Todas las categorías</button>
+      <div class="cathead">${r.f?`<div class="chf ${/\/suela-/.test(r.f)?'alta':''}"><img src="${r.f}" alt=""></div>`:''}
+        <div><h2>${esc(S.mpCat)}</h2><p>${arr.length} ${arr.length===1?'referencia':'referencias'} · ${fmt(r.total)} en total</p>${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</div></div>
+      <div class="mpgrid ${uf?'compacta':''}">` + orden(arr).map(x=>tarjetaMp(x, uf)).join('') + '</div>' + tip;
+    $('#volver').onclick = ()=>{ S.mpCat=null; pintarMp(); window.scrollTo(0,0); };
+  } else {
+    S.mpCat = null;
+    $('#lista').innerHTML = '<div class="tiles">' + [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>{
+      const r = resumen(arr);
+      return `<button class="tile ${r.b?'low':''}" data-c="${esc(c)}">
+        <span class="tf">${r.f?`<img src="${r.f}" alt="" loading="lazy">`:'<span class="nf">Sin foto</span>'}${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</span>
+        <span class="tt"><b>${esc(c)}</b><small>${arr.length} ${arr.length===1?'ref.':'refs.'} · ${fmt(r.total)} en total</small></span></button>`;
+    }).join('') + '</div>';
+    document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{ S.mpCat=t.dataset.c; pintarMp(); window.scrollTo(0,0); });
+  }
   enlazarMp();
 }
 
