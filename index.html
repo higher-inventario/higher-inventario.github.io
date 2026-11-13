@@ -139,6 +139,12 @@
   .tf{position:relative;aspect-ratio:1/1;background:#f3f3f1;display:flex;align-items:center;justify-content:center}
   .tf img{width:100%;height:100%;object-fit:cover}
   .tf .gbajo{position:absolute;top:8px;left:8px}
+  .tf.ico,.chf.ico{background:linear-gradient(140deg,rgba(255,255,255,.22),rgba(0,0,0,.38)),var(--c);color:#fff;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .tf.ico{aspect-ratio:4/3}
+  .ico .ini{font-size:46px;font-weight:800;letter-spacing:.02em;text-shadow:0 2px 10px rgba(0,0,0,.25);z-index:1}
+  .ico .icn{position:absolute;right:-14px;bottom:-14px;width:96px;height:96px;opacity:.28}
+  .chf.ico{width:84px;height:84px;aspect-ratio:auto}.chf.ico .ini{font-size:30px}.chf.ico .icn{width:60px;height:60px;right:-10px;bottom:-10px}
+  .tile:hover .tf.ico{filter:brightness(1.08)}
   .tt{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--acc)}
   .tt b{font-size:15px;line-height:1.2}.tt small{color:var(--sub);font-size:12px}
   .gbajo{display:inline-block;background:#5a1d1d;color:#ff8a80;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
@@ -437,17 +443,32 @@ async function minimo(id){
 }
 
 let cola = Promise.resolve();
+// Los toques se agrupan: se espera un momento y se manda un solo envío con todos los cambios
+const porEnviar = new Map(); let tmEnvio = null;
 function cambiar(id, valor, fijar){
   const f=S.filas.find(x=>x.id===id); const antes=f.pares;
   f.pares = Math.max(0, fijar ? valor : f.pares+valor);
   if(f.pares===antes) return;
   if(navigator.vibrate) navigator.vibrate(10);
-  render(); S.pend++; estado();
-  cola = cola.then(()=>llamar('ajustar', id, valor, fijar, ''))
-    .then(r=>{ f.pares=r.pares; S.err=false; })
-    .catch(e=>{ f.pares=antes; S.err=true; toast('No se guardó: '+(e.message||e)); })
-    .finally(()=>{ S.pend--; if(S.vista==='detalle') render(); else estado(); });
+  let e = porEnviar.get(id);
+  if(!e){ e = { id, delta:0, fijar:false, antes }; porEnviar.set(id, e); }
+  if(fijar || e.fijar){ e.fijar = true; e.valor = f.pares; } else { e.delta += (f.pares - antes); }
+  if(porEnviar.size===1 && !tmEnvio){ S.pend++; }
+  render(); estado();
+  clearTimeout(tmEnvio); tmEnvio = setTimeout(enviarCambios, 600);
 }
+function enviarCambios(){
+  tmEnvio = null;
+  const lote = [...porEnviar.values()]; porEnviar.clear();
+  if(!lote.length){ S.pend=Math.max(0,S.pend-1); estado(); return; }
+  const lista = lote.filter(e=>e.fijar || e.delta).map(e=>({ id:e.id, valor: e.fijar ? e.valor : e.delta, fijar: e.fijar }));
+  cola = cola.then(()=> lista.length ? llamar('ajustarLote', lista) : [])
+    .then(r=>{ (r||[]).forEach(x=>{ const f=S.filas.find(y=>y.id===x.id); if(f && !porEnviar.has(x.id)) f.pares=x.pares; }); S.err=false; })
+    .catch(err=>{ lote.forEach(e=>{ const f=S.filas.find(y=>y.id===e.id); if(f) f.pares=e.antes; }); S.err=true; toast('No se guardó: '+(err.message||err)); })
+    .finally(()=>{ S.pend=Math.max(0,S.pend-1); if(S.vista==='detalle') render(); else estado(); });
+}
+window.addEventListener('pagehide', ()=>{ if(tmEnvio){ clearTimeout(tmEnvio); enviarCambios(); } });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && tmEnvio){ clearTimeout(tmEnvio); enviarCambios(); } });
 
 function vAlertas(){
   header(cabecera('Bajo stock'));
@@ -544,6 +565,22 @@ function vMpLista(){
     </div><div id="lista"></div>`;
   pintarMp();
 }
+// Portadas de categoría: ícono + iniciales con un color fijo por grupo
+const PALETA_CAT = ['#E4572E','#29A0B1','#7B61FF','#E0A100','#2EC4B6','#D84393','#4C8DFF','#43A047','#FF8A3D','#9C6ADE','#00A3A3'];
+function colorCat(c){ const l=[...new Set(S.mp.map(x=>x.categoria))].sort((a,b)=>a.localeCompare(b)); const i=Math.max(0,l.indexOf(c)); return PALETA_CAT[i % PALETA_CAT.length]; }
+function inicialesCat(c){
+  const p = String(c).split(/\s+/).filter(w=>w && !/^(de|del|la|el|y|para|tipo|en|los|las)$/i.test(w));
+  return ((p[0]||'')[0]||'').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
+}
+const ICONOS_CAT = {
+  suela:'<path d="M12 2c3.5 0 6 2.7 6 6.5 0 2.6-1 4.4-1.8 6.1-.7 1.5-1 2.7-1 4.4 0 1.7-1.4 3-3.2 3S8.8 21.7 8.8 20c0-1.4-.5-2.6-1.2-4.1C6.8 14.2 6 12.4 6 9.5 6 5.2 8.5 2 12 2z"/>',
+  hgr:'<path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 10v4M9 10v4M6 12h3M15 10h-2v4h2v-2"/>',
+  pieza:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>'
+};
+function iconoCat(c){
+  const k = /suela/i.test(c) ? 'suela' : /hgr|insignia|adventure/i.test(c) ? 'hgr' : 'pieza';
+  return `<span class="ini">${esc(inicialesCat(c))}</span><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONOS_CAT[k]}</svg>`;
+}
 function pintarMp(){
   const q = slug(S.q);
   const xs = S.mp.filter(x=>!q || slug(x.material).includes(q) || slug(x.categoria).includes(q));
@@ -560,7 +597,7 @@ function pintarMp(){
   } else if(S.mpCat && g.has(S.mpCat)){
     const arr = g.get(S.mpCat), r = resumen(arr), uf = unaFoto(arr);
     $('#lista').innerHTML = `<button class="volver" id="volver">‹ Todas las categorías</button>
-      <div class="cathead">${r.f?`<div class="chf ${/\/suela-/.test(r.f)?'alta':''}"><img src="${r.f}" alt=""></div>`:''}
+      <div class="cathead"><div class="chf ico" style="--c:${colorCat(S.mpCat)}">${iconoCat(S.mpCat)}</div>
         <div><h2>${esc(S.mpCat)}</h2><p>${arr.length} ${arr.length===1?'referencia':'referencias'} · ${fmt(r.total)} en total</p>${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</div></div>
       <div class="mpgrid ${uf?'compacta':''}">` + orden(arr).map(x=>tarjetaMp(x, uf)).join('') + '</div>' + tip;
     $('#volver').onclick = ()=>{ S.mpCat=null; pintarMp(); window.scrollTo(0,0); };
@@ -569,7 +606,7 @@ function pintarMp(){
     $('#lista').innerHTML = '<div class="tiles">' + [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>{
       const r = resumen(arr);
       return `<button class="tile ${r.b?'low':''}" data-c="${esc(c)}">
-        <span class="tf">${r.f?`<img src="${r.f}" alt="" loading="lazy">`:'<span class="nf">Sin foto</span>'}${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</span>
+        <span class="tf ico" style="--c:${colorCat(c)}">${iconoCat(c)}${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</span>
         <span class="tt"><b>${esc(c)}</b><small>${arr.length} ${arr.length===1?'ref.':'refs.'} · ${fmt(r.total)} en total</small></span></button>`;
     }).join('') + '</div>';
     document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{ S.mpCat=t.dataset.c; pintarMp(); window.scrollTo(0,0); });
