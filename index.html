@@ -383,7 +383,7 @@ function vModelos(){
   const totPares = ms.reduce((a,b)=>a+b.pares,0);
   const totValor = S.filas.reduce((a,f)=>a+f.pares*f.precio,0);
   const bajos = S.filas.filter(f=>f.pares<f.minimo).length;
-  header(cabecera('Bodega', `<div style="margin-top:10px"><input id="q" placeholder="Buscar modelo, color o talla (ej: 40)…" value="${esc(S.q)}"></div>`));
+  header(cabecera('Bodega', `<div style="margin-top:10px"><input id="q" placeholder="Buscar modelo, color o talla (ej: T 40)…" value="${esc(S.q)}"></div>`));
   $('#q').oninput = e=>{ S.q=e.target.value; pintarLista(); };
   $('#app').innerHTML = `<div class="stats">
       <div class="stat"><b>${fmt(totPares)}</b><span>pares en total</span></div>
@@ -394,10 +394,11 @@ function vModelos(){
 }
 function pintarLista(){
   // Búsqueda por talla: "40", "talla 40", "urban 40", "rojo 38"…
-  const mt = String(S.q).match(/\b(3[0-9]|4[0-9]|50)\b/);
+  const qq = String(S.q).replace(/\b(?:tallas?|t)\s*\.?\s*(?=\d)/ig,' ');
+  const mt = qq.match(/(?:^|\D)(3[0-9]|4[0-9]|50)(?!\d)/);
   if(mt){
     const t = Number(mt[1]);
-    const resto = slug(String(S.q).replace(/talla/ig,' ').replace(mt[0],' '));
+    const resto = slug(qq.replace(mt[1],' '));
     const fs = S.filas.filter(f=>f.talla===t && (!resto || slug(f.modelo+' '+f.color).includes(resto)))
       .sort((a,b)=>b.pares-a.pares || a.modelo.localeCompare(b.modelo));
     const conPares = fs.filter(f=>f.pares>0).length;
@@ -611,7 +612,7 @@ function iconoCat(c){
   return `<img class="hgr" src="logo.png" alt="HGR"><span class="ini">${esc(inicialesCat(c))}</span>`;
 }
 function pintarMp(){
-  const q = slug(S.q);
+  const q = slug(String(S.q).replace(/\b(?:tallas?|t)\s*\.?\s*(\d)/ig,'talla $1'));
   const xs = S.mp.filter(x=>!q || slug(x.material).includes(q) || slug(x.categoria).includes(q));
   if(!S.mp.length){ $('#lista').innerHTML = '<div class="empty">Aún no hay materiales.<br>Toca <b>＋ Agregar</b> abajo para crear el primero.</div>'; return; }
   const g = new Map(); xs.forEach(x=>{ if(!g.has(x.categoria)) g.set(x.categoria, []); g.get(x.categoria).push(x); });
