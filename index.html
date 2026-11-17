@@ -149,6 +149,7 @@
   .tile:hover .tf.ico{filter:brightness(1.08)}
   .mq-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 2px 10px;padding-left:10px;border-left:4px solid var(--acc)}
   .mq-t span:first-child{font-size:16px;font-weight:700}.mq-t small{color:var(--sub);font-size:12px}
+  .card.tal{margin:0}.card.tal .s{display:flex;align-items:center;gap:6px}
   .tbus{padding:6px 2px 2px;color:var(--sub);font-size:13px}.tbus b{color:var(--txt);font-size:16px}
   .sec-t{margin:18px 2px 10px;font-size:18px;display:flex;align-items:center;gap:8px}
   .sec-t small{background:var(--card2);color:var(--sub);font-size:12px;padding:2px 9px;border-radius:999px}
@@ -403,12 +404,12 @@ function pintarLista(){
       .sort((a,b)=>b.pares-a.pares || a.modelo.localeCompare(b.modelo));
     const conPares = fs.filter(f=>f.pares>0).length;
     $('#lista').innerHTML = `<div class="tbus" style="grid-column:1/-1"><b>Talla ${t}</b> · ${conPares} con existencias de ${fs.length}</div>` + (fs.length ? fs.map(f=>`
-      <div class="item tal" data-m="${esc(f.modelo)}" data-c="${esc(f.color)}" style="grid-column:1/-1">
-        <div class="th">${img(foto(f.modelo, f.color))}</div>
-        <div><div class="n">${esc(f.modelo)}</div><div class="s">${esc(f.color)} · Talla ${t}</div></div>
-        <div class="pill"><b class="${f.pares<f.minimo?'warn':''}">${fmt(f.pares)}</b><small>pares</small></div></div>`).join('')
+      <div class="card tal" data-m="${esc(f.modelo)}" data-c="${esc(f.color)}">
+        <div class="ph">${img(foto(f.modelo, f.color), f.modelo)}<span class="badge ${f.pares<f.minimo?'low':''}">${fmt(f.pares)}</span></div>
+        <div class="info"><div class="n">${esc(f.modelo)}</div><div class="s"><span class="cd" style="background:${tono(f.color)}"></span> ${esc(f.color)} · T${t} · ${fmt(f.pares)} ${f.pares===1?'par':'pares'}</div></div>
+      </div>`).join('')
       : '<div class="empty" style="grid-column:1/-1">No hay resultados</div>');
-    document.querySelectorAll('.item.tal').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); scrollTo(0,0); });
+    document.querySelectorAll('.card.tal').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); scrollTo(0,0); });
     return;
   }
   const q = slug(S.q);
