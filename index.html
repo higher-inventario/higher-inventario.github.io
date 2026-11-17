@@ -20,7 +20,7 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  header{position:sticky;top:0;z-index:5;background:rgba(14,14,15,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  header{position:sticky;top:0;z-index:100;background:rgba(14,14,15,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
   .hin{max-width:960px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px 10px}
   .top{display:flex;align-items:center;gap:10px}
   .logo{height:30px;width:auto;display:block;margin-bottom:4px}
@@ -98,11 +98,11 @@
   .form{display:grid;gap:10px;margin-top:10px}
   .btn{background:var(--acc);color:#111;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:700;cursor:pointer}
 
-  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,18,20,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  nav{position:fixed;z-index:100;bottom:0;left:0;right:0;background:rgba(18,18,20,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
   nav button{flex:1;background:none;border:0;color:var(--sub);font-size:11px;padding:6px 0;cursor:pointer}
   nav button i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}
   nav button.on{color:var(--acc)}
-  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9;max-width:90%}
+  .toast{position:fixed;z-index:200;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9;max-width:90%}
   .toast.show{opacity:1}
   .empty{color:var(--sub);text-align:center;padding:40px 0}
   /* login */
@@ -147,6 +147,9 @@
   .ico .ini{position:absolute;right:10px;bottom:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px);font-size:13px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:8px;z-index:1}
   .chf.ico{width:84px;height:84px;aspect-ratio:auto}.chf.ico .hgr{width:78%}.chf.ico .ini{display:none}
   .tile:hover .tf.ico{filter:brightness(1.08)}
+  .sec-t{margin:18px 2px 10px;font-size:18px;display:flex;align-items:center;gap:8px}
+  .sec-t small{background:var(--card2);color:var(--sub);font-size:12px;padding:2px 9px;border-radius:999px}
+  .tf.ref{background:#fff;aspect-ratio:4/3;overflow:hidden}.tf.ref img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:8px;box-sizing:border-box}
   .tt{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--acc)}
   .tt b{font-size:15px;line-height:1.2}.tt small{color:var(--sub);font-size:12px}
   .gbajo{display:inline-block;background:#5a1d1d;color:#ff8a80;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
@@ -157,6 +160,10 @@
   .chf.alta{width:96px;aspect-ratio:3/4}
   .chf img{width:100%;height:100%;object-fit:cover}
   @media(min-width:900px){.mpgrid.compacta{grid-template-columns:repeat(5,1fr)}}
+  .chf.foto{background:#fff}.chf.foto img{object-fit:contain}
+  .unico-t{margin:18px 0 8px;font-weight:700;color:var(--acc);font-size:15px;display:flex;align-items:center;gap:8px}
+  .unico-t::before{content:"★"}
+  .mpgrid.unico .mp{border-color:var(--acc)}
   .mp.sf{position:relative}.mp.sf .cuerpo{padding-top:12px}
   .alerta2{position:absolute;top:8px;right:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px}
   .mpgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -520,10 +527,10 @@ function vNuevo(){
 
 /* ================= MATERIA PRIMA ================= */
 // Fotos de materia prima (carpeta fotos/mp/), por nombre del material
-const FOTOS_MP = new Set(["suela-para-modelo-sport", "suela-casco", "suela-para-modelos-touring", "suela-trump", "suela-sprint-brazil", "suela-2289", "suela-tipo-ingeniero", "canillera", "pantorrilla", "talon", "banana-negra", "hgr-redonda-grande-y-pequena-morada", "caucho-adventure-negro", "hgr-redonda-grande-y-pequena-blanca", "insignia-de-aventura-blanca", "insignia-de-aventura-gris-oscuro", "insignia-de-aventura-naranja", "banana-morada", "banana-amarilla", "banana-azul", "molde-punta-correa-touring-azul", "molde-punta-correa-touring-naranja", "hgr-redonda-grande-y-pequena-naranja", "hgr-redonda-grande-y-pequena-azul", "hgr-redonda-grande-y-pequena-roja", "hgr-redonda-grande-y-pequena-gris", "caucho-kids-canilla-morado", "caucho-kids-talon-rosado", "caucho-street-azul", "caucho-talon-street-rojo", "banana-blanca", "banana-fucsia", "banana-gris", "banana-naranja", "banana-neon", "banana-roja", "hgr-redonda-grande-y-pequena-fucsia", "hgr-redonda-grande-y-pequena-negra", "hgr-redonda-grande-y-pequena-neon", "insignia-de-aventura-en-blanco", "insignia-de-aventura-en-blanco-morada", "insignia-de-aventura-en-blanco-y-fucsia", "insignia-de-aventura-en-blanco-y-gris", "insignia-de-aventura-en-blanco-y-negro", "insignia-de-aventura-en-blanco-y-rojo", "insignia-de-aventura-en-neon", "molde-hgr-correa-superficial-fucsia", "molde-hgr-correa-superficial-negra", "molde-hgr-correa-superficial-neon", "molde-hgr-correa-superficial-roja", "molde-punta-correa-touring-blanca", "molde-punta-correa-touring-fucsia", "molde-punta-correa-touring-gris", "molde-punta-correa-touring-morada", "molde-punta-correa-touring-negra", "molde-punta-correa-touring-neon", "molde-punta-correa-touring-roja"]);
+const FOTOS_MP = new Set(["suela-caja", "suela-militar", "suela-derby-dama", "suela-para-modelo-sport", "suela-casco", "suela-para-modelos-touring", "suela-trump", "suela-sprint-brazil", "suela-2289", "suela-tipo-ingeniero", "canillera", "pantorrilla", "talon", "banana-negra", "hgr-redonda-grande-y-pequena-morada", "caucho-adventure-negro", "hgr-redonda-grande-y-pequena-blanca", "insignia-de-aventura-blanca", "insignia-de-aventura-gris-oscuro", "insignia-de-aventura-naranja", "banana-morada", "banana-amarilla", "banana-azul", "molde-punta-correa-touring-azul", "molde-punta-correa-touring-naranja", "hgr-redonda-grande-y-pequena-naranja", "hgr-redonda-grande-y-pequena-azul", "hgr-redonda-grande-y-pequena-roja", "hgr-redonda-grande-y-pequena-gris", "caucho-kids-canilla-morado", "caucho-kids-talon-rosado", "caucho-street-azul", "caucho-talon-street-rojo", "banana-blanca", "banana-fucsia", "banana-gris", "banana-naranja", "banana-neon", "banana-roja", "hgr-redonda-grande-y-pequena-fucsia", "hgr-redonda-grande-y-pequena-negra", "hgr-redonda-grande-y-pequena-neon", "insignia-de-aventura-en-blanco", "insignia-de-aventura-en-blanco-morada", "insignia-de-aventura-en-blanco-y-fucsia", "insignia-de-aventura-en-blanco-y-gris", "insignia-de-aventura-en-blanco-y-negro", "insignia-de-aventura-en-blanco-y-rojo", "insignia-de-aventura-en-neon", "molde-hgr-correa-superficial-fucsia", "molde-hgr-correa-superficial-negra", "molde-hgr-correa-superficial-neon", "molde-hgr-correa-superficial-roja", "molde-punta-correa-touring-blanca", "molde-punta-correa-touring-fucsia", "molde-punta-correa-touring-gris", "molde-punta-correa-touring-morada", "molde-punta-correa-touring-negra", "molde-punta-correa-touring-neon", "molde-punta-correa-touring-roja"]);
 // Grande y pequeña comparten foto; los cauchos usan la foto del molde
 const claveFotoMp = m => slug(m).replace(/^(suela-.*)-talla-\d+$/,'$1').replace(/^caucho-(hgr-correa-superficial|punta-correa-touring)-/,'molde-$1-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1').replace(/^banana-(grande|pequena)-/,'banana-').replace(/^(canillera|pantorrilla|talon)-(grande|pequena|pequeno)$/,'$1').replace(/^caucho-pantorrilla-touring-(grande|pequena|pequeno)$/,'pantorrilla').replace(/^caucho-talon-urban-y-touring-(grande|pequena|pequeno)$/,'talon').replace(/^insignia-de-aventura-negro$/,'insignia-de-aventura-gris-oscuro');
-const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=3' : '';
+const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=4' : '';
 // Nombre corto: si el material empieza con el nombre del grupo, se muestra solo lo que cambia (p. ej. el color)
 function nombreCorto(x){
   const m = String(x.material), c = String(x.categoria||'');
@@ -599,18 +606,24 @@ function pintarMp(){
   } else if(S.mpCat && g.has(S.mpCat)){
     const arr = g.get(S.mpCat), r = resumen(arr), uf = unaFoto(arr);
     $('#lista').innerHTML = `<button class="volver" id="volver">‹ Todas las categorías</button>
-      <div class="cathead"><div class="chf ico" style="--c:${colorCat(S.mpCat)}">${iconoCat(S.mpCat)}</div>
+      <div class="cathead">${uf && r.f ? `<div class="chf foto ${/\/suela-/.test(r.f)?'alta':''}"><img src="${r.f}" alt=""></div>` : `<div class="chf ico" style="--c:${colorCat(S.mpCat)}">${iconoCat(S.mpCat)}</div>`}
         <div><h2>${esc(S.mpCat)}</h2><p>${arr.length} ${arr.length===1?'referencia':'referencias'} · ${fmt(r.total)} en total</p>${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</div></div>
-      <div class="mpgrid ${uf?'compacta':''}">` + orden(arr).map(x=>tarjetaMp(x, uf)).join('') + '</div>' + tip;
+      ` + (()=>{ const esSuela=/^suela/i.test(S.mpCat); const unico=esSuela?arr.filter(x=>x.cantidad===1):[]; const resto=arr.filter(x=>!unico.includes(x));
+        return `<div class="mpgrid ${uf?'compacta':''}">` + orden(resto).map(x=>tarjetaMp(x, uf)).join('') + '</div>' +
+          (unico.length ? `<div class="unico-t">Único par – muestras disponibles</div><div class="mpgrid ${uf?'compacta':''} unico">` + orden(unico).map(x=>tarjetaMp(x, uf)).join('') + '</div>' : ''); })() + tip;
     $('#volver').onclick = ()=>{ S.mpCat=null; pintarMp(); window.scrollTo(0,0); };
   } else {
     S.mpCat = null;
-    $('#lista').innerHTML = '<div class="tiles">' + [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([c, arr])=>{
-      const r = resumen(arr);
+    const tile = ([c, arr]) => {
+      const r = resumen(arr), suela = /^suela/i.test(c) && r.f;
       return `<button class="tile ${r.b?'low':''}" data-c="${esc(c)}">
-        <span class="tf ico" style="--c:${colorCat(c)}">${iconoCat(c)}${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</span>
+        ${suela ? `<span class="tf ref"><img src="${r.f}" alt="" loading="lazy">` : `<span class="tf ico" style="--c:${colorCat(c)}">${iconoCat(c)}`}${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</span>
         <span class="tt"><b>${esc(c)}</b><small>${arr.length} ${arr.length===1?'ref.':'refs.'} · ${fmt(r.total)} en total</small></span></button>`;
-    }).join('') + '</div>';
+    };
+    const todos = [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+    const suelas = todos.filter(([c])=>/^suela/i.test(c)), marq = todos.filter(([c])=>!/^suela/i.test(c));
+    const seccion = (t, l) => l.length ? `<h3 class="sec-t">${t} <small>${l.length}</small></h3><div class="tiles">` + l.map(tile).join('') + '</div>' : '';
+    $('#lista').innerHTML = seccion('Suelas', suelas) + seccion('Marquillas', marq);
     document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{ S.mpCat=t.dataset.c; pintarMp(); window.scrollTo(0,0); });
   }
   enlazarMp();
