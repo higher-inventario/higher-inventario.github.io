@@ -400,15 +400,15 @@ function pintarLista(){
   if(mt){
     const t = Number(mt[1]);
     const resto = slug(qq.replace(mt[1],' '));
-    const fs = S.filas.filter(f=>f.talla===t && (!resto || slug(f.modelo+' '+f.color).includes(resto)))
+    const fs = S.filas.filter(f=>f.talla===t && f.pares>0 && (!resto || slug(f.modelo+' '+f.color).includes(resto)))
       .sort((a,b)=>b.pares-a.pares || a.modelo.localeCompare(b.modelo));
     const conPares = fs.filter(f=>f.pares>0).length;
-    $('#lista').innerHTML = `<div class="tbus" style="grid-column:1/-1"><b>Talla ${t}</b> · ${conPares} con existencias de ${fs.length}</div>` + (fs.length ? fs.map(f=>`
+    $('#lista').innerHTML = `<div class="tbus" style="grid-column:1/-1"><b>Talla ${t}</b> · ${fs.length} ${fs.length===1?'referencia':'referencias'} con existencias · ${fmt(fs.reduce((a,f)=>a+f.pares,0))} pares</div>` + (fs.length ? fs.map(f=>`
       <div class="card tal" data-m="${esc(f.modelo)}" data-c="${esc(f.color)}">
         <div class="ph">${img(foto(f.modelo, f.color), f.modelo)}<span class="badge ${f.pares<f.minimo?'low':''}">${fmt(f.pares)}</span></div>
         <div class="info"><div class="n">${esc(f.modelo)}</div><div class="s"><span class="cd" style="background:${tono(f.color)}"></span> ${esc(f.color)} · T${t} · ${fmt(f.pares)} ${f.pares===1?'par':'pares'}</div></div>
       </div>`).join('')
-      : '<div class="empty" style="grid-column:1/-1">No hay resultados</div>');
+      : `<div class="empty" style="grid-column:1/-1">No hay existencias en talla ${t}</div>`);
     document.querySelectorAll('.card.tal').forEach(el=>el.onclick=()=>{ S.modelo=el.dataset.m; S.color=el.dataset.c; S.vista='detalle'; render(); scrollTo(0,0); });
     return;
   }
