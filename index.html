@@ -147,6 +147,8 @@
   .ico .ini{position:absolute;right:10px;bottom:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px);font-size:13px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:8px;z-index:1}
   .chf.ico{width:84px;height:84px;aspect-ratio:auto}.chf.ico .hgr{width:78%}.chf.ico .ini{display:none}
   .tile:hover .tf.ico{filter:brightness(1.08)}
+  .mq-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 2px 10px;padding-left:10px;border-left:4px solid var(--acc)}
+  .mq-t span:first-child{font-size:16px;font-weight:700}.mq-t small{color:var(--sub);font-size:12px}
   .sec-t{margin:18px 2px 10px;font-size:18px;display:flex;align-items:center;gap:8px}
   .sec-t small{background:var(--card2);color:var(--sub);font-size:12px;padding:2px 9px;border-radius:999px}
   .tf.ref{background:#fff;aspect-ratio:4/3;overflow:hidden}.tf.ref img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:8px;box-sizing:border-box}
@@ -623,7 +625,13 @@ function pintarMp(){
     const todos = [...g.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
     const suelas = todos.filter(([c])=>/^suela/i.test(c)), marq = todos.filter(([c])=>!/^suela/i.test(c));
     const seccion = (t, l) => l.length ? `<h3 class="sec-t">${t} <small>${l.length}</small></h3><div class="tiles">` + l.map(tile).join('') + '</div>' : '';
-    $('#lista').innerHTML = seccion('Suelas', suelas) + seccion('Marquillas', marq);
+    const marqHtml = marq.length ? `<h3 class="sec-t">Marquillas <small>${marq.length}</small></h3>` + marq.map(([c, arr])=>{
+        const r = resumen(arr);
+        return `<div class="mq-t"><span>${esc(c)}</span><small>${arr.length} ${arr.length===1?'ref.':'refs.'} · ${fmt(r.total)} en total</small>${r.b?`<span class="gbajo">${r.b} bajo mínimo</span>`:''}</div>
+          <div class="mpgrid">` + orden(arr).map(x=>tarjetaMp(x, false)).join('') + '</div>';
+      }).join('') + tip : '';
+    $('#lista').innerHTML = seccion('Suelas', suelas) + marqHtml;
+    enlazarMp();
     document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{ S.mpCat=t.dataset.c; pintarMp(); window.scrollTo(0,0); });
   }
   enlazarMp();
