@@ -347,7 +347,7 @@ async function cargar(silencioso){
   try{
     if(S.pend || !PIN) return;
     if(S.sec==='bodega'){ const r = await llamar('obtenerInventario'); if(S.pend) return; S.filas = r.filas; }
-    else { const r = await llamar('mpObtener'); if(S.pend) return; S.mp = r; }
+    else { const r = await llamar('mpObtener'); if(S.pend) return; S.mp = r.filter(x=>!(String(x.categoria)==='Marquillas' && String(x.material)==='Caucho garra grande derecho')); }
     S.err=false; render();
   }catch(e){ S.err=true; estado(); if(!silencioso) toast('Error: '+(e.message||e)); }
 }
