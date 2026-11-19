@@ -553,7 +553,7 @@ const FOTOS_MP = new Set(["insignia-de-aventura-azul", "caucho-punta-correa-mult
 // Grande y pequeña comparten foto; los cauchos usan la foto del molde
 const claveFotoMp = m => slug(m).replace(/^(suela-.*)-talla-[\d-]+$/,'$1').replace(/^marquilla-sequoia-speed-(grande|pequena)$/,'marquilla-sequoia-speed').replace(/^caucho-garra-(grande|pequena)(-derecho|-izquierdo)?$/,'caucho-garra').replace(/^(caucho-garra(?:-cuadrada)?)-(derecho|izquierdo)$/,'$1').replace(/^caucho-(hgr-correa-superficial|punta-correa-touring)-/,'molde-$1-').replace(/^(hgr-redonda-)(grande|pequena)-/,'$1grande-y-pequena-').replace(/^(insignia-de-aventura-)(grande|pequena)-/,'$1').replace(/^banana-(grande|pequena)-/,'banana-').replace(/^(canillera|pantorrilla|talon)-(grande|pequena|pequeno)$/,'$1').replace(/^caucho-pantorrilla-touring-(grande|pequena|pequeno)$/,'pantorrilla').replace(/^caucho-talon-urban-y-touring-(grande|pequena|pequeno)$/,'talon').replace(/^insignia-de-aventura-negro$/,'insignia-de-aventura-gris-oscuro');
 const fotoMp = m => FOTOS_MP.has(claveFotoMp(m)) ? 'fotos/mp/'+claveFotoMp(m)+'.webp?v=6' : '';
-const FOTO_GARRA_GP = 'fotos/mp/'+encodeURIComponent('WhatsApp Image 2026-11-19 at 8.06.55 AM.jpeg');
+const FOTO_GARRA_GP = 'fotos/mp/caucho-garra-grande-pequena.jpg?v=1';
 const fotoMpX = x => /^caucho-garra-(grande|pequena)$/.test(slug(x.categoria||'')) ? FOTO_GARRA_GP : (fotoMp(x.material) || fotoMp(String(x.categoria||'')+' '+x.material));
 // Nombre corto: si el material empieza con el nombre del grupo, se muestra solo lo que cambia (p. ej. el color)
 function nombreCorto(x){
