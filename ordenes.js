@@ -284,9 +284,12 @@
     return opciones.find(o => raiz(o) === c)
       || (/celeste/.test(c) && opciones.find(o => raiz(o) === 'azul clar'))
       || opciones.find(o => raiz(o) === c.split(' ')[0])
+      || opciones.find(o => raiz(o) === raiz('en blanco y '+colorBota))
       || '';
   }
 
+  // nombre completo para mostrar (ej. "Caucho garra grande · Derecho")
+  const nombreMat = x => norm(x.material).includes(norm(x.categoria)) || /^(suela|caucho|banana|hgr|insignia|canillera|slider)/i.test(x.material) ? x.material : `${x.categoria} · ${x.material}`;
   // calcula la lista de materiales a sacar
   function calcular(modelo, suela, tallas, colores){
     const r = RECETAS[modelo]; if(!r) return [];
@@ -410,7 +413,7 @@
       const lineas = calcular(R.modelo, R.suela, R.tallas, R.colores);
       const fila = l => {
         const hay = l.x ? l.x.cantidad : null, falta = !l.x, poco = l.x && l.x.cantidad < l.q;
-        return `<div class="ot-ml ${falta||poco?'mal':''}"><span>${esc(l.x ? l.x.material : l.nombre)}</span>
+        return `<div class="ot-ml ${falta||poco?'mal':''}"><span>${esc(l.x ? nombreMat(l.x) : l.nombre)}</span>
           <b>${fmt(l.q)} ${esc(l.x ? l.x.unidad : '')}</b>
           <small>${falta ? (l.sinColor ? 'Elige el color arriba' : 'No existe en materia prima') : `hay ${fmt(hay)}${poco?' · NO alcanza':''}`}</small></div>`;
       };
@@ -440,7 +443,7 @@
         if(lineas.some(l => l.sinColor)) return toast('Falta elegir el color de alguna marquilla');
         const faltan = lineas.filter(l => !l.x), poco = lineas.filter(l => l.x && l.x.cantidad < l.q);
         if(faltan.length || poco.length){
-          const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${l.x.material}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
+          const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${nombreMat(l.x)}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
           if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Se descuenta lo que sí exista.`)) return;
         }
         pares = totalPares();
@@ -462,7 +465,7 @@
         const fallos = [];
         for(const l of lineas.filter(l => l.x)){
           try{ await llamar('mpAjustar', l.x.id, -l.q, false, nota); }
-          catch(e){ fallos.push(`${l.x.material} (${e.message||e})`); }
+          catch(e){ fallos.push(`${nombreMat(l.x)} (${e.message||e})`); }
         }
         S.pend--; estado();
         if(fallos.length){
