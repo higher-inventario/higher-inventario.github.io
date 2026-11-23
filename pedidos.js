@@ -156,7 +156,7 @@
           ${f.foto ? `<img src="${f.foto}" alt="${esc(f.x.material)}">` : '<span class="nf">Sin foto</span>'}
           <div>
             <div class="t">${esc(f.x.material)}</div>
-            <div class="s">Hay ${fmt(f.x.cantidad)} · mínimo ${fmt(f.x.minimo)} ${esc(f.x.unidad||'')} · ${f.tam}</div>
+            <div class="s">${Number(f.x.cantidad)<0 ? `<b style="color:#ff8a80">Faltan ${fmt(-f.x.cantidad)} ${esc(f.x.unidad||'')} para órdenes</b> · ` : `Hay ${fmt(f.x.cantidad)} · `}mínimo ${fmt(f.x.minimo)} ${esc(f.x.unidad||'')} · ${f.tam}</div>
             <div class="ped-campos">
               <label><small>Molde</small><input class="ped-molde" value="${esc(f.molde)}"></label>
               <label><small>Color</small><input class="ped-color" value="${esc(f.color)}"></label>

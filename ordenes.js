@@ -40,7 +40,8 @@
       pares: Number(p[4]) || 0,
       entrega: /^\d{4}-\d{2}-\d{2}$/.test(p[5]||'') ? p[5] : '',
       estado: Math.max(0, Math.min(ESTADOS.length-1, Math.round(Number(x.cantidad)||0))),
-      pos: Number(x.minimo) || 0
+      pos: Number(x.minimo) || 0,
+      consumo: /^C:/.test(p[6]||'') ? p[6].slice(2).split(',').map(t => { const [id,q] = t.split('*'); return { id, q: Number(q)||0 }; }).filter(c => c.id && c.q) : []
     };
   }
   // saca las órdenes de la lista de materia prima para que no se vean como materiales
@@ -157,6 +158,18 @@
     .ot-ml.mal{border-color:#ff8a80}.ot-ml.mal small{color:#ff8a80;font-weight:700}
   </style>`;
 
+  async function moverConsumo(o, devolver){
+    const fallos = [];
+    S.pend++; estado();
+    for(const c of o.consumo){
+      try{ await llamar('mpAjustar', c.id, devolver ? c.q : -c.q, false, `OT ${o.num} ${devolver ? 'anulada: devolución' : 'reactivada'}`); }
+      catch(e){ const x = (S.mp||[]).find(y => y.id === c.id); fallos.push(`${x ? x.material : c.id}: ${c.q} (${e.message||e})`); }
+    }
+    S.pend--; estado();
+    if(fallos.length) alert(`Orden N° ${o.num}: no se pudo ${devolver?'devolver':'descontar'}:\n\n${fallos.join('\n')}\n\nHazlo a mano en Materia prima.`);
+    else toast(devolver ? `Materia prima de la orden N° ${o.num} devuelta a bodega` : `Materia prima de la orden N° ${o.num} descontada otra vez`);
+  }
+
   function tarjeta(o, pos, total){
     const [nom, col] = ESTADOS[o.estado], e = infoEntrega(o), maq = o.tipo==='maquila';
     return `<div class="ot-card ${maq && o.estado<CERRADA?'maq':''}" style="--ec:${col}" data-id="${esc(o.id)}">
@@ -199,6 +212,12 @@
       const sel = card.querySelector('.ot-est');
       if(sel) sel.onchange = () => {
         const nuevo = Number(sel.value), antes = o.estado; if(nuevo === antes) return;
+        const ANUL = ESTADOS.length - 1;
+        if(o.consumo.length && (nuevo === ANUL) !== (antes === ANUL)){
+          const devolver = nuevo === ANUL;
+          if(!confirm(devolver ? `¿Anular la orden N° ${o.num}? La materia prima que se descontó vuelve a bodega.` : `¿Reactivar la orden N° ${o.num}? Se vuelve a descontar su materia prima.`)){ sel.value = antes; return; }
+          moverConsumo(o, devolver);
+        }
         o.estado = nuevo;
         const ps = [llamar('mpAjustar', o.id, nuevo, true, `OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`)];
         if(o.tipo==='maquila') ps.push(...numerar(colaMaquila()));
@@ -445,36 +464,43 @@
         const faltan = lineas.filter(l => !l.x), poco = lineas.filter(l => l.x && l.x.cantidad < l.q);
         if(faltan.length || poco.length){
           const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${nombreMat(l.x)}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
-          if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Se descuenta lo que sí exista.`)) return;
+          if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Lo que falta queda en negativo y se agrega solo al Pedido de marquillas.`)) return;
         }
         pares = totalPares();
         desc = limpio(`${R.modelo} ${R.color} · suela ${R.suela} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
       }
       const b = $('#otCrear'); b.disabled = true; b.textContent = 'Guardando…';
       const pos = tipo==='maquila' ? Number($('#otPos').value) : 0;
-      const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}`;
       S.pend++; estado();
+      // 1) descuenta la materia prima (si no alcanza queda en negativo y entra al Pedido)
+      const nota = `OT ${num} · ${R.modelo} ${R.color}`;
+      const hecho = [], fallos = [];
+      for(const l of lineas.filter(l => l.x)){
+        try{ await llamar('mpAjustar', l.x.id, -l.q, false, nota); hecho.push({ id:l.x.id, q:l.q }); }
+        catch(e){
+          // si no deja quedar en negativo, saca lo que haya
+          const hay = Math.max(0, Math.floor(l.x.cantidad));
+          if(hay > 0 && hay < l.q){ try{ await llamar('mpAjustar', l.x.id, -hay, false, nota+' (parcial)'); hecho.push({ id:l.x.id, q:hay }); fallos.push(`${nombreMat(l.x)}: solo se sacaron ${fmt(hay)} de ${fmt(l.q)}`); continue; }catch(e2){} }
+          fallos.push(`${nombreMat(l.x)}: ${fmt(l.q)} (${e.message||e})`);
+        }
+      }
+      const consumo = hecho.length ? ' | C:' + hecho.map(c => `${c.id}*${c.q}`).join(',') : '';
+      const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}${consumo}`;
       try{
+        // 2) crea la orden
         await llamar('mpAgregar', nombre, CAT, 'orden', 0, pos);
         if(tipo==='maquila'){
           const c = colaMaquila(); const ps = [];
           c.forEach((o,k) => { const nueva = k+1 >= pos ? k+2 : k+1; if(o.pos !== nueva){ o.pos = nueva; ps.push(llamar('mpFijarMinimo', o.id, nueva)); } });
           await Promise.all(ps);
         }
-        // descuenta la materia prima de la receta
-        const nota = `OT ${num} · ${R.modelo} ${R.color}`;
-        const fallos = [];
-        for(const l of lineas.filter(l => l.x)){
-          try{ await llamar('mpAjustar', l.x.id, -l.q, false, nota); }
-          catch(e){ fallos.push(`${nombreMat(l.x)} (${e.message||e})`); }
-        }
         S.pend--; estado();
-        if(fallos.length){
-          alert(`La orden N° ${num} se creó, pero NO se pudo descontar:\n\n${fallos.join('\n')}\n\nDescuéntalo a mano en Materia prima.`);
-        } else toast(lineas.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`);
+        if(fallos.length) alert(`La orden N° ${num} se creó, pero esto NO se descontó:\n\n${fallos.join('\n')}\n\nDescuéntalo a mano en Materia prima.`);
+        else toast(lineas.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`);
         S.vista = 'otLista'; formPintado = false; ultimoMp = null;
         await cargar();
       }catch(e){
+        for(const c of hecho){ try{ await llamar('mpAjustar', c.id, c.q, false, `OT ${num} no se creó: devolución`); }catch(e2){} }
         S.pend--; estado(); toast('Error: ' + (e.message||e));
         b.disabled = false; b.textContent = 'Crear orden de trabajo';
       }
