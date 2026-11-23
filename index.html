@@ -116,6 +116,7 @@
   .rolbox{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 10px;color:var(--txt);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .12s,border-color .12s}
   .rolbox:active{transform:scale(.97)} .rolbox:hover{border-color:var(--acc)}
   .rolbox .ri{font-size:30px;margin-bottom:4px}
+  .rolbox[data-r="ordenes"]{grid-column:1 / -1;border-color:var(--acc)}
   .rolbox b{font-size:15px} .rolbox small{color:var(--sub);font-size:11.5px}
   .cajas{display:flex;gap:12px;justify-content:center;cursor:text}
   .caja{width:54px;height:62px;border-radius:14px;background:var(--card2);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--txt)}
@@ -255,6 +256,8 @@ const TONO = {negro:'#111',cafe:'#6B4423',gris:'#8E8E93',azul:'#1E5BD8','azul-os
 const tono = c => TONO[slug(c)] || '#555';
 
 let S = { sec:'bodega', filas:[], mp:[], vista:'modelos', modelo:null, color:null, q:'', pend:0 };
+try { if(localStorage.getItem('secHGR')==='ot'){ S.sec='ot'; S.vista='otLista'; } } catch(e) {}
+function guardarSec(){ try { localStorage.setItem('secHGR', S.sec); } catch(e) {} }
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n).toLocaleString('es-CO', {maximumFractionDigits:3});
 const plata = n => '$' + Math.round(n).toLocaleString('es-CO');
@@ -269,7 +272,8 @@ const ROLES_LOGIN = [
   ['bodega','👢','Bodega','Botas terminadas'],
   ['mp','📦','Materia prima','Materiales de producción'],
   ['ventas','🏷️','Ventas','Consultar existencias'],
-  ['jefes','👔','Jefes','Ver bodega y materia prima']
+  ['jefes','👔','Jefes','Ver bodega y materia prima'],
+  ['ordenes','🛠️','Órdenes de trabajo','Estado y prioridad de cada orden']
 ];
 function vLogin(){
   $('#cab').style.display='none'; $('#nav').style.display='none';
@@ -299,8 +303,8 @@ function vPin(rol){
     try{
       const r = await fetch(API, { method:'POST', body: JSON.stringify({accion:'login', args:[], pin:p}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
       const j = await r.json();
-      if(j.ok && (j.data === rol || j.data === 'admin')){  /* el PIN del administrador es código maestro: entra por cualquier recuadro */
-        guardarSesion(p, j.data); enviando=false; return iniciar(); }
+      if(j.ok && (j.data === rol || j.data === 'admin' || (rol==='ordenes' && j.data==='jefes'))){  /* el PIN del administrador es código maestro: entra por cualquier recuadro; Órdenes de trabajo usa el PIN de Jefes */
+        guardarSesion(p, j.data); S.sec = rol==='ordenes' ? 'ot' : (j.data==='mp' ? 'mp' : 'bodega'); if(rol==='ordenes') S.vista='otLista'; guardarSec(); enviando=false; return iniciar(); }
       toast('PIN incorrecto'); inp.value=''; pintar();
       const c=$('.cajas'); c.classList.remove('error'); void c.offsetWidth; c.classList.add('error');
     }catch(e){ toast('Sin conexión'); }
@@ -316,7 +320,7 @@ function vPin(rol){
 }
 function salir(){
   if(!confirm('¿Cerrar sesión en este celular?')) return;
-  guardarSesion('', ''); S.filas=[]; S.mp=[]; iniciar();
+  guardarSesion('', ''); S.filas=[]; S.mp=[]; S.sec='bodega'; guardarSec(); iniciar();
 }
 
 function iniciar(){
@@ -327,6 +331,7 @@ function iniciar(){
   if(soloVer() && S.vista==='nuevo') S.vista='modelos';
   if(soloVer() && S.vista==='mpNuevo') S.vista='mpLista';
   if(ROL==='mp') S.sec='mp';
+  if(S.sec==='ot' && !veAmbas()) S.sec='bodega';
   if(S.sec==='mp' && !['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='mpLista';
   if(S.sec==='bodega' && ['mpLista','mpAlertas','mpMovs','mpNuevo'].includes(S.vista)) S.vista='modelos';
   $('#app').innerHTML='<div class="empty">Cargando…</div>';
@@ -354,10 +359,10 @@ async function cargar(silencioso){
 
 function header(html){ $('#hdr').innerHTML = html; estado();
   const sb=$('#salir'); if(sb) sb.onclick=salir;
-  document.querySelectorAll('.secs button').forEach(b=>b.onclick=()=>{ if(S.sec===b.dataset.s) return; S.sec=b.dataset.s; S.vista = S.sec==='bodega'?'modelos':'mpLista'; iniciar(); });
+  document.querySelectorAll('.secs button').forEach(b=>b.onclick=()=>{ if(S.sec===b.dataset.s) return; S.sec=b.dataset.s; S.vista = S.sec==='bodega'?'modelos':S.sec==='ot'?'otLista':'mpLista'; guardarSec(); iniciar(); });
 }
 function cabecera(titulo, extra=''){
-  const secs = veAmbas() ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button></div>` : '';
+  const secs = veAmbas() ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button><button data-s="ot" class="${S.sec==='ot'?'on':''}">🛠️ Órdenes</button></div>` : '';
   return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
   <div class="der"><button class="rol on" id="salir">${NOMBRE_ROL[ROL]||''} · Salir</button>
   <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${secs}${extra}`;
@@ -735,6 +740,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden && PIN) c
 iniciar();
 </script>
   <script src="pedidos.js"></script>
+  <script src="ordenes.js"></script>
   <script>
   /* Botones Seleccionar todo / Deseleccionar todo en el Pedido de marquillas */
   (function(){
