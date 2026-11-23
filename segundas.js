@@ -1,19 +1,19 @@
 /* =====================================================================
    SEGUNDAS  (Bodega → cuadro "Segundas")
-   Modelos de segunda: "Urban segunda" y "Race segunda", tallas 34 a 44,
+   Modelos de segunda: "Urban segunda" y "Race segunda", tallas 34 a 46,
    un solo color ("Surtido"). No salen en la lista principal de modelos
    ni en "Bajo stock"; se ven entrando al cuadro Segundas.
    ===================================================================== */
 (function(){
   const SEGUNDAS = ['Urban segunda', 'Race segunda'];
   const COLOR = 'Surtido';
-  const TALLA_MAX = 44;
+  const TALLA_MAX = 46;
   const esSeg = m => /\bsegunda$/i.test(String(m||'').trim());
 
   FOTO_MODELO['urban-segunda'] = 'jpg';
   FOTO_MODELO['race-segunda'] = 'jpg';
 
-  // las segundas van de la 34 a la 44: se esconden las tallas 45 y 46 que crea la hoja
+  // las segundas van de la 34 a la 44: van de la 34 a la 46 (las que crea la hoja)
   let ultimo = null;
   function limpiar(){
     if(!Array.isArray(S.filas) || S.filas === ultimo) return;
@@ -70,7 +70,7 @@
       <div class="card segc" id="cardSegundas">
         <div class="ph seg"><img src="logo.png" alt="HGR"><span class="badge">${fmt(pares)}</span></div>
         <div class="info"><div class="n">Segundas</div>
-        <div class="s">${ms.length} ${ms.length===1?'modelo':'modelos'} · tallas 34 a 44</div></div>
+        <div class="s">${ms.length} ${ms.length===1?'modelo':'modelos'} · tallas 34 a 46</div></div>
       </div>`);
     document.getElementById('cardSegundas').onclick = () => { S.vista = 'segundas'; render(); scrollTo(0,0); };
   };
@@ -83,7 +83,7 @@
     creando = true; intentoCrear = true;
     try{
       for(const n of faltan) await llamar('agregarModelo', n, COLOR, '');
-      toast('Segundas creadas: tallas 34 a 44');
+      toast('Segundas creadas: tallas 34 a 46');
       ultimo = null; await cargar();
     }catch(e){ toast('No se pudieron crear las segundas: ' + (e.message||e)); }
     finally{ creando = false; if(S.vista === 'segundas') render(); }
@@ -98,7 +98,7 @@
     $('#app').innerHTML = `<div class="cat">${ms.map(m => `
       <div class="card" data-m="${esc(m.modelo)}">
         <div class="ph">${img(foto(m.modelo), m.modelo)}<span class="badge ${m.pares===0?'low':''}">${fmt(m.pares)}</span></div>
-        <div class="info"><div class="n">${esc(m.modelo)}</div><div class="s">Tallas 34 a 44 · cualquier color</div></div>
+        <div class="info"><div class="n">${esc(m.modelo)}</div><div class="s">Tallas 34 a 46 · cualquier color</div></div>
       </div>`).join('')}
       ${faltan ? `<div class="seg-aviso">${creando ? 'Creando las segundas…'
         : intentoCrear ? 'No se pudieron crear desde este perfil. Entra con Bodega o Administrador y abre Segundas para crearlas.' : 'Creando las segundas…'}</div>` : ''}
