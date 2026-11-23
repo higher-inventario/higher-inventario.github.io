@@ -161,7 +161,7 @@
           </div>
         </div>`;
   function vMpPedido(){
-    header(cabecera('Pedido de marquillas'));
+    header(cabecera('Pedido de materia prima'));
     if(!S.mp || !S.mp.length){ $('#app').innerHTML = '<div class="empty">Cargando…</div>'; return; }
     const urg = filasUrgentes(), st = filasPedido();
     const fs = modo === 'urgente' ? urg : st;
@@ -173,9 +173,9 @@
       cuerpo = fs.length ? [...grupos.entries()].map(([ot, arr]) => `
           <div class="ped-ot">🛠️ Orden de trabajo N° ${ot}<small>${esc(arr[0].otDesc||'')}</small></div>
           <div class="ped-list">${arr.map(fila).join('')}</div>`).join('')
-        : '<div class="empty">No falta ninguna marquilla para las órdenes de trabajo 🎉</div>';
+        : '<div class="empty">No falta materia prima para las órdenes de trabajo 🎉</div>';
     } else {
-      cuerpo = fs.length ? `<div class="ped-list">${fs.map(fila).join('')}</div>` : '<div class="empty">Todas las marquillas están por encima del mínimo 🎉</div>';
+      cuerpo = fs.length ? `<div class="ped-list">${fs.map(fila).join('')}</div>` : '<div class="empty">Toda la materia prima está por encima del mínimo 🎉</div>';
     }
     $('#app').innerHTML = `
       <style>
@@ -203,15 +203,15 @@
         @media (max-width:560px){ .ped-campos{grid-template-columns:60px 1fr} .ped-campos .pp{grid-column:1 / -1} }
       </style>
       <div class="ped-modo">
-        <button data-m="stock" class="${modo==='stock'?'on':''}">📦 Pedido marquillas stock<small>${st.length} bajo mínimo</small></button>
-        <button data-m="urgente" class="urg ${modo==='urgente'?'on':''}">🚨 Pedido marquillas urgentes<small>para órdenes de trabajo · ${urg.length}</small></button>
+        <button data-m="stock" class="${modo==='stock'?'on':''}">📦 Pedido materia prima stock<small>${st.length} bajo mínimo</small></button>
+        <button data-m="urgente" class="urg ${modo==='urgente'?'on':''}">🚨 Pedido materia prima urgentes<small>para órdenes de trabajo · ${urg.length}</small></button>
       </div>
       <div class="ped-top">
         <label>Pedido N°</label><input id="pedNum" inputmode="numeric" value="${n}">
-        <span style="color:var(--sub);font-size:13px">${fs.length} marquilla${fs.length===1?'':'s'} ${modo==='urgente'?'faltantes para órdenes':'por debajo del mínimo'}</span>
+        <span style="color:var(--sub);font-size:13px">${fs.length} referencia${fs.length===1?'':'s'} ${modo==='urgente'?'faltantes para órdenes':'por debajo del mínimo'}</span>
       </div>
       ${cuerpo}
-      ${fs.length ? `<button class="btn" id="pedGen" style="margin-top:16px">Generar pedido ${modo==='urgente'?'urgente ':''}de marquillas (PDF)</button>` : ''}
+      ${fs.length ? `<button class="btn" id="pedGen" style="margin-top:16px">Generar pedido ${modo==='urgente'?'urgente ':''}de materia prima (PDF)</button>` : ''}
     `;
     document.querySelectorAll('.ped-modo button').forEach(b => b.onclick = () => { modo = b.dataset.m; pintado = false; vMpPedido(); });
     document.querySelectorAll('.ped-row').forEach(r => {
@@ -270,7 +270,7 @@
         color: r.querySelector('.ped-color').value.trim().toUpperCase(),
         pares: parseInt(r.querySelector('.ped-pares').value, 10) || 0 });
     });
-    if(!filas.length){ toast('Selecciona al menos una marquilla'); return; }
+    if(!filas.length){ toast('Selecciona al menos una referencia'); return; }
     btn.disabled = true; btn.textContent = 'Generando PDF…';
     try{
       await cargarJsPDF();
@@ -291,7 +291,7 @@
           doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0);
           doc.text(fechaLarga(new Date()), x0, y);
           doc.setFont('helvetica','bold'); doc.setFontSize(14);
-          doc.text(urgente ? `PEDIDO DE MARQUILLAS URGENTE N° ${n} - ÓRDENES DE TRABAJO` : `PEDIDO DE MARQUILLAS N° ${n}`, x0, y + 22);
+          doc.text(urgente ? `PEDIDO DE MATERIA PRIMA URGENTE N° ${n} - ÓRDENES DE TRABAJO` : `PEDIDO DE MATERIA PRIMA STOCK N° ${n}`, x0, y + 22);
           y += 40;
         }
         doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...rojo);
@@ -332,7 +332,7 @@
         if(fotos[i]){ const lado = altoFila - 10; doc.addImage(fotos[i], 'JPEG', xs[4] + (cols[4][1]-lado)/2, y + 5, lado, lado); }
         y += altoFila;
       });
-      doc.save(urgente ? `PEDIDO MARQUILLAS URGENTE N${n}.pdf` : `PEDIDO MARQUILLAS N${n}.pdf`);
+      doc.save(urgente ? `PEDIDO MATERIA PRIMA URGENTE N${n}.pdf` : `PEDIDO MATERIA PRIMA STOCK N${n}.pdf`);
 
       // guardar el consecutivo en la hoja
       try{
@@ -344,7 +344,7 @@
         toast(`PDF descargado, pero no se guardó el consecutivo: ${e.message||e}`);
       }
     }catch(e){ toast('Error: ' + (e.message||e)); }
-    finally{ if(btn){ btn.disabled = false; btn.textContent = `Generar pedido ${urgente?'urgente ':''}de marquillas (PDF)`; } }
+    finally{ if(btn){ btn.disabled = false; btn.textContent = `Generar pedido ${urgente?'urgente ':''}de materia prima (PDF)`; } }
   }
 
   // si la app ya pintó antes de cargar este archivo, repintar para que aparezca la pestaña
