@@ -41,6 +41,7 @@
       entrega: /^\d{4}-\d{2}-\d{2}$/.test(p[5]||'') ? p[5] : '',
       estado: Math.max(0, Math.min(ESTADOS.length-1, Math.round(Number(x.cantidad)||0))),
       pos: Number(x.minimo) || 0,
+      faltan: (p.find(v => /^F:/.test(v)) || 'F:').slice(2).split(',').filter(Boolean).map(t => { const [id,q] = t.split('*'); return { id, q: Number(q)||0 }; }).filter(c => c.id && c.q),
       consumo: /^C:/.test(p[6]||'') ? p[6].slice(2).split(',').map(t => { const [id,q] = t.split('*'); return { id, q: Number(q)||0 }; }).filter(c => c.id && c.q) : []
     };
   }
@@ -464,7 +465,7 @@
         const faltan = lineas.filter(l => !l.x), poco = lineas.filter(l => l.x && l.x.cantidad < l.q);
         if(faltan.length || poco.length){
           const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${nombreMat(l.x)}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
-          if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Lo que falta queda en negativo y se agrega solo al Pedido de marquillas.`)) return;
+          if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Lo que falta queda en negativo y pasa solo a Materia prima → Pedido → Urgentes para órdenes.`)) return;
         }
         pares = totalPares();
         desc = limpio(`${R.modelo} ${R.color} · suela ${R.suela} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
@@ -485,7 +486,9 @@
         }
       }
       const consumo = hecho.length ? ' | C:' + hecho.map(c => `${c.id}*${c.q}`).join(',') : '';
-      const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}${consumo}`;
+      const faltaron = lineas.filter(l => l.x && l.q > Math.max(0, l.x.cantidad)).map(l => `${l.x.id}*${l.q - Math.max(0, l.x.cantidad)}`);
+      const faltanTxt = faltaron.length ? ' | F:' + faltaron.join(',') : '';
+      const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}${consumo}${faltanTxt}`;
       try{
         // 2) crea la orden
         await llamar('mpAgregar', nombre, CAT, 'orden', 0, pos);
