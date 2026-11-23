@@ -107,18 +107,29 @@
   const cerradas = () => S.ot.filter(o => o.estado >= CERRADA).sort((a,b) => b.num - a.num);
   const proximoNum = () => S.ot.reduce((m,o) => Math.max(m, o.num), 0) + 1;
 
-  async function guardar(promesas, ok){
+  // guarda en el servidor en UNA sola llamada; la pantalla ya se actualizó antes (instantáneo)
+  async function enviar(op, ok, alFallar){
+    if(ok) toast(ok);
     S.pend++; estado();
-    try{ await Promise.all(promesas); if(ok) toast(ok); }
-    catch(e){ toast('Error: ' + (e.message||e)); ultimoMp = null; S.pend--; estado(); return cargar(true); }
-    S.pend--; estado();
+    try{
+      const r = await llamar('mpOrden', op);
+      Object.entries((r && r.cantidades) || {}).forEach(([id, c]) => { const x = (S.mp||[]).find(y => y.id === id); if(x) x.cantidad = c; });
+      S.pend--; estado();
+      return r;
+    }catch(e){
+      S.pend--; estado();
+      alert('No se guardó en el servidor: ' + (e.message||e) + (alFallar ? '\n\n' + alFallar : ''));
+      ultimoMp = null; cargar(true);
+      throw e;
+    }
   }
-  // deja la cola de maquila numerada 1, 2, 3… según el orden dado
+  // deja la cola de maquila numerada 1, 2, 3… según el orden dado (devuelve los cambios para el servidor)
   function numerar(cola){
-    const ps = [];
-    cola.forEach((o,k) => { if(o.pos !== k+1){ o.pos = k+1; ps.push(llamar('mpFijarMinimo', o.id, k+1)); } });
-    return ps;
+    const ms = [];
+    cola.forEach((o,k) => { if(o.pos !== k+1){ o.pos = k+1; if(!o.tmp) ms.push({ id:o.id, minimo:k+1 }); } });
+    return ms;
   }
+  const moverLocal = (ajustes) => ajustes.forEach(a => { const x = (S.mp||[]).find(y => y.id === a.id); if(x) x.cantidad = Math.round((x.cantidad + a.delta)*1000)/1000; });
 
   // ---------- vista: lista ----------
   const CSS = `<style>
@@ -162,18 +173,6 @@
     .ot-ml.mal{border-color:#ff8a80}.ot-ml.mal small{color:#ff8a80;font-weight:700}
   </style>`;
 
-  async function moverConsumo(o, devolver){
-    const fallos = [];
-    S.pend++; estado();
-    for(const c of o.consumo){
-      try{ await llamar('mpAjustar', c.id, devolver ? c.q : -c.q, false, `OT ${o.num} ${devolver ? 'anulada: devolución' : 'reactivada'}`); }
-      catch(e){ const x = (S.mp||[]).find(y => y.id === c.id); fallos.push(`${x ? x.material : c.id}: ${c.q} (${e.message||e})`); }
-    }
-    S.pend--; estado();
-    if(fallos.length) alert(`Orden N° ${o.num}: no se pudo ${devolver?'devolver':'descontar'}:\n\n${fallos.join('\n')}\n\nHazlo a mano en Materia prima.`);
-    else toast(devolver ? `Materia prima de la orden N° ${o.num} devuelta a bodega` : `Materia prima de la orden N° ${o.num} descontada otra vez`);
-  }
-
   function tarjeta(o, pos, total){
     const [nom, col] = ESTADOS[o.estado], e = infoEntrega(o), maq = o.tipo==='maquila';
     return `<div class="ot-card ${maq && o.estado<CERRADA?'maq':''}" style="--ec:${col}" data-id="${esc(o.id)}">
@@ -184,7 +183,7 @@
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
-          <select class="ot-est">${ESTADOS.map(([t],i)=>`<option value="${i}" ${i===o.estado?'selected':''}>${t}</option>`).join('')}</select>
+          <select class="ot-est" ${o.tmp?'disabled title="Guardando…"':''}>${ESTADOS.map(([t],i)=>`<option value="${i}" ${i===o.estado?'selected':''}>${t}</option>`).join('')}</select>
           ${pos?`<button class="ot-mv" data-d="-1" ${pos===1?'disabled':''} title="Subir prioridad">↑</button><button class="ot-mv" data-d="1" ${pos===total?'disabled':''} title="Bajar prioridad">↓</button>`:''}
         </div>
       </div></div>`;
@@ -217,24 +216,27 @@
       if(sel) sel.onchange = () => {
         const nuevo = Number(sel.value), antes = o.estado; if(nuevo === antes) return;
         const ANUL = ESTADOS.length - 1;
+        let ajustes = [], extra = '';
         if(o.consumo.length && (nuevo === ANUL) !== (antes === ANUL)){
           const devolver = nuevo === ANUL;
           if(!confirm(devolver ? `¿Anular la orden N° ${o.num}? La materia prima que se descontó vuelve a bodega.` : `¿Reactivar la orden N° ${o.num}? Se vuelve a descontar su materia prima.`)){ sel.value = antes; return; }
-          moverConsumo(o, devolver);
+          ajustes = o.consumo.map(c => ({ id:c.id, delta: devolver ? c.q : -c.q }));
+          extra = devolver ? ' · materia prima devuelta' : ' · materia prima descontada';
         }
         o.estado = nuevo;
-        const ps = [llamar('mpAjustar', o.id, nuevo, true, `OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`)];
-        if(o.tipo==='maquila') ps.push(...numerar(colaMaquila()));
+        const minimos = o.tipo==='maquila' ? numerar(colaMaquila()) : [];
+        moverLocal(ajustes);
         vLista();
-        guardar(ps, `Orden N° ${o.num}: ${ESTADOS[nuevo][0]}`);
+        enviar({ nota:`OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`, fijar:[{ id:o.id, cantidad:nuevo }], minimos, ajustes },
+          `Orden N° ${o.num}: ${ESTADOS[nuevo][0]}${extra}`).catch(()=>{});
       };
       card.querySelectorAll('.ot-mv').forEach(b => b.onclick = () => {
         const c = colaMaquila(), i = c.indexOf(o), j = i + Number(b.dataset.d);
         if(i < 0 || j < 0 || j >= c.length) return;
         [c[i], c[j]] = [c[j], c[i]];
-        const ps = numerar(c);
+        const minimos = numerar(c);
         vLista();
-        guardar(ps, `Orden N° ${o.num} ahora es la #${j+1} de maquila`);
+        enviar({ nota:`OT ${o.num}: prioridad #${j+1}`, minimos }, `Orden N° ${o.num} ahora es la #${j+1} de maquila`).catch(()=>{});
       });
     });
   }
@@ -473,43 +475,27 @@
         pares = totalPares();
         desc = limpio(`${R.modelo} ${R.color} · suela ${R.suela} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
       }
-      const b = $('#otCrear'); b.disabled = true; b.textContent = 'Guardando…';
       const pos = tipo==='maquila' ? Number($('#otPos').value) : 0;
-      S.pend++; estado();
-      // 1) descuenta la materia prima (si no alcanza queda en negativo y entra al Pedido)
-      const nota = `OT ${num} · ${R.modelo} ${R.color}`;
-      const hecho = [], fallos = [];
-      for(const l of lineas.filter(l => l.x)){
-        try{ await llamar('mpAjustar', l.x.id, -l.q, false, nota); hecho.push({ id:l.x.id, q:l.q }); }
-        catch(e){
-          // si no deja quedar en negativo, saca lo que haya
-          const hay = Math.max(0, Math.floor(l.x.cantidad));
-          if(hay > 0 && hay < l.q){ try{ await llamar('mpAjustar', l.x.id, -hay, false, nota+' (parcial)'); hecho.push({ id:l.x.id, q:hay }); fallos.push(`${nombreMat(l.x)}: solo se sacaron ${fmt(hay)} de ${fmt(l.q)}`); continue; }catch(e2){} }
-          fallos.push(`${nombreMat(l.x)}: ${fmt(l.q)} (${e.message||e})`);
-        }
-      }
-      const consumo = hecho.length ? ' | C:' + hecho.map(c => `${c.id}*${c.q}`).join(',') : '';
+      // materia prima: se descuenta todo (si no alcanza queda en negativo y pasa al Pedido urgente)
+      const ajustes = lineas.filter(l => l.x).map(l => ({ id:l.x.id, delta:-l.q }));
       const faltaron = lineas.filter(l => l.x && l.q > Math.max(0, l.x.cantidad)).map(l => `${l.x.id}*${l.q - Math.max(0, l.x.cantidad)}`);
+      const consumo = ajustes.length ? ' | C:' + ajustes.map(a => `${a.id}*${-a.delta}`).join(',') : '';
       const faltanTxt = faltaron.length ? ' | F:' + faltaron.join(',') : '';
       const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}${consumo}${faltanTxt}`;
-      try{
-        // 2) crea la orden
-        await llamar('mpAgregar', nombre, CAT, 'orden', 0, pos);
-        if(tipo==='maquila'){
-          const c = colaMaquila(); const ps = [];
-          c.forEach((o,k) => { const nueva = k+1 >= pos ? k+2 : k+1; if(o.pos !== nueva){ o.pos = nueva; ps.push(llamar('mpFijarMinimo', o.id, nueva)); } });
-          await Promise.all(ps);
-        }
-        S.pend--; estado();
-        if(fallos.length) alert(`La orden N° ${num} se creó, pero esto NO se descontó:\n\n${fallos.join('\n')}\n\nDescuéntalo a mano en Materia prima.`);
-        else toast(lineas.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`);
-        S.vista = 'otLista'; formPintado = false; ultimoMp = null;
-        await cargar();
-      }catch(e){
-        for(const c of hecho){ try{ await llamar('mpAjustar', c.id, c.q, false, `OT ${num} no se creó: devolución`); }catch(e2){} }
-        S.pend--; estado(); toast('Error: ' + (e.message||e));
-        b.disabled = false; b.textContent = 'Crear orden de trabajo';
-      }
+      // corre las de maquila que quedan después de la nueva
+      const minimos = [];
+      if(tipo==='maquila') colaMaquila().forEach((o,k) => { const nueva = k+1 >= pos ? k+2 : k+1; if(o.pos !== nueva){ o.pos = nueva; if(!o.tmp) minimos.push({ id:o.id, minimo:nueva }); } });
+      // pantalla al instante
+      const local = parse({ id:'tmp-'+num, material:nombre, cantidad:0, minimo:pos }); local.tmp = true;
+      S.ot.push(local);
+      moverLocal(ajustes);
+      S.vista = 'otLista'; formPintado = false; render(); scrollTo(0,0);
+      // servidor en segundo plano, una sola llamada
+      enviar({ nota:`OT ${num} · ${R.modelo ? R.modelo+' '+R.color : 'creada'}`, crear:{ material:nombre, categoria:CAT, unidad:'orden', cantidad:0, minimo:pos }, ajustes, minimos },
+        ajustes.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`,
+        `La orden N° ${num} no quedó guardada. Vuelve a crearla.`)
+        .then(r => { if(r && r.id){ local.id = r.id; } local.tmp = false; if(S.sec==='ot' && S.vista==='otLista') vLista(); })
+        .catch(() => { S.ot = S.ot.filter(o => o !== local); if(S.sec==='ot' && S.vista==='otLista') vLista(); });
     };
   }
 
