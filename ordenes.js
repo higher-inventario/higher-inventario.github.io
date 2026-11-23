@@ -146,6 +146,15 @@
     .ot-tip button{border:1px solid var(--line);background:var(--card2);color:var(--txt);border-radius:12px;padding:12px;font-weight:700;font-size:14px;cursor:pointer}
     .ot-tip button.on{background:var(--acc);color:#111;border-color:var(--acc)}
     .ot-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .ot-tallas{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
+    .ot-tallas input{text-align:center;padding:9px 4px}
+    .ot-mat-t{font-weight:700;margin:8px 2px 4px}
+    .ot-mat-t .ot-ayuda{font-size:12px;color:var(--sub);font-weight:400}
+    .ot-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ot-mlist{display:flex;flex-direction:column;gap:6px}
+    .ot-ml{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:14px}
+    .ot-ml b{text-align:right}.ot-ml small{grid-column:1/-1;color:var(--sub);font-size:12px}
+    .ot-ml.mal{border-color:#ff8a80}.ot-ml.mal small{color:#ff8a80;font-weight:700}
   </style>`;
 
   function tarjeta(o, pos, total){
@@ -207,6 +216,123 @@
     });
   }
 
+
+  /* ---------- RECETAS: lo que lleva cada modelo ----------
+     Banana, HGR, insignia, canillera, cauchos…: 2 unidades por par.
+     Caucho garra: 1 derecho + 1 izquierdo por par.
+     Suelas y Slider Race: 1 par por par.
+     Pequeña = tallas 34 a 39 · Grande = tallas 40 a 46.            */
+  const grande = t => t >= 40;
+  const PIEZAS = {
+    banana:     { n:'Banana',                      cat:t=>grande(t)?'Banana grande':'Banana pequeña', color:true, q:2 },
+    hgr:        { n:'HGR redonda',                 cat:t=>grande(t)?'HGR redonda grande':'HGR redonda pequeña', color:true, q:2 },
+    insignia:   { n:'Insignia de aventura',        cat:t=>grande(t)?'Insignia de aventura grande':'Insignia de aventura pequeña', color:true, q:2 },
+    correa:     { n:'Caucho correa superficial',   cat:()=>'Caucho correa superficial', color:true, q:2 },
+    punta:      { n:'Caucho punta correa Touring', cat:()=>'Caucho punta correa Touring', color:true, q:2 },
+    canillera:  { n:'Canillera',                   cat:()=>'Canillera', mat:t=>grande(t)?/grande/i:/peque/i, q:2 },
+    pantorrilla:{ n:'Caucho pantorrilla Touring',  cat:()=>'Caucho pantorrilla Touring', mat:t=>grande(t)?/grande/i:/peque/i, q:2 },
+    talon:      { n:'Caucho talón Urban y Touring',cat:()=>'Caucho talón Urban y Touring', mat:t=>grande(t)?/grande/i:/peque/i, q:2 },
+    adventure:  { n:'Caucho Adventure',            cat:()=>'Caucho Adventure', q:2 },
+    garraPG:    { n:'Caucho garra',                cat:t=>grande(t)?'Caucho garra grande':'Caucho garra pequeña', lados:true },
+    garra:      { n:'Caucho garra estándar',       cat:()=>'Caucho garra', lados:true },
+    slider:     { n:'Slider Race',                 cat:()=>'Slider Race', q:1 }
+  };
+  const RANGO_TOURING = t => t<=36?'35-36':t<=38?'37-38':t<=40?'39-40':t<=42?'41-42':t<=44?'43-44':'45-46';
+  const SUELAS = {
+    'Touring':      t => ['Suela para modelos Touring', `Suela para modelos Touring talla ${RANGO_TOURING(t)}`],
+    'Trump':        t => ['Suela Trump',  `Suela Trump talla ${t===40?39:t}`],
+    'Militar':      t => ['Suela militar',`Suela militar talla ${t===40?39:t}`],
+    '2289':         t => ['Suela 2289',   `Suela 2289 talla ${t}`],
+    'Sprint Brazil':t => ['Suela Sprint Brazil', `Suela Sprint Brazil talla ${t}`]
+  };
+  const TOURING = ['banana','canillera','adventure','correa','garraPG','pantorrilla','punta','talon','hgr','insignia'];
+  const URBAN   = ['banana','garra','punta','insignia'];
+  const FUERZA = ['Trump','Militar'];
+  const RECETAS = {
+    'Bota Touring Race':      { suelas:['Touring'], piezas:TOURING },
+    'Bota Race':              { suelas:['Touring'], piezas:[...TOURING, 'slider'] },
+    'Bota Race White':        { suelas:['Touring'], piezas:TOURING },
+    'Bota Touring Force':     { suelas:FUERZA,      piezas:TOURING },
+    'Botín Urban':            { suelas:['Touring'], piezas:URBAN },
+    'Botín Urban Go':         { suelas:['Touring'], piezas:URBAN },
+    'Botín Urban Force':      { suelas:FUERZA,      piezas:URBAN },
+    'Bota Fusión':            { suelas:['2289','Sprint Brazil'], piezas:['correa','garra'] },
+    'Bota Fusión Force':      { suelas:FUERZA,      piezas:['correa','garra'] },
+    'Botín Force':            { suelas:['2289','Sprint Brazil'], piezas:[] },
+    'Botín Force Industrial': { suelas:FUERZA,      piezas:[] }
+  };
+  const TALLAS = [34,35,36,37,38,39,40,41,42,43,44,45,46];
+
+  const norm = s => slug(s).replace(/-/g,' ');
+  const enCat = c => S.mp.filter(x => norm(x.categoria) === norm(c));
+  const buscar = (c, nombre) => S.mp.find(x => norm(x.material) === norm(nombre) && (!c || norm(x.categoria) === norm(c))) || S.mp.find(x => norm(x.material) === norm(nombre));
+  // "color" de un material = lo que sigue al nombre común del grupo (ej. "roja", "en blanco y rojo")
+  function etiqueta(x){
+    const hermanos = enCat(x.categoria).map(y => y.material);
+    if(hermanos.length < 2) return x.material;
+    let p = hermanos.reduce((a,b) => { let i=0; while(i<a.length && i<b.length && a[i].toLowerCase()===b[i].toLowerCase()) i++; return a.slice(0,i); });
+    p = p.slice(0, p.lastIndexOf(' ')+1);
+    return x.material.slice(p.length).trim() || x.material;
+  }
+  const raiz = s => norm(s).split(' ').map(w => w.replace(/[aoe]$/,'')).join(' ');
+  function sugerir(opciones, colorBota, modelo, clave){
+    const c = raiz(colorBota);
+    if(/white/i.test(modelo) && clave==='insignia'){
+      const w = opciones.find(o => raiz(o) === raiz('en blanco y '+colorBota)) || opciones.find(o => raiz(o) === raiz('en blanco '+colorBota)) || opciones.find(o => norm(o) === 'en blanco');
+      if(w) return w;
+    }
+    return opciones.find(o => raiz(o) === c)
+      || (/celeste/.test(c) && opciones.find(o => raiz(o) === 'azul clar'))
+      || opciones.find(o => raiz(o) === c.split(' ')[0])
+      || '';
+  }
+
+  // calcula la lista de materiales a sacar
+  function calcular(modelo, suela, tallas, colores){
+    const r = RECETAS[modelo]; if(!r) return [];
+    const lineas = new Map();
+    const sumar = (clave, nombre, x, q, extra) => {
+      const k = x ? x.id : 'falta:'+clave+':'+nombre;
+      const l = lineas.get(k) || { clave, nombre, x, q:0, ...extra };
+      l.q += q; lineas.set(k, l);
+    };
+    Object.entries(tallas).forEach(([ts, pares]) => {
+      const t = Number(ts); if(!pares) return;
+      const [cs, ns] = SUELAS[suela](t);
+      sumar('suela', ns, buscar(cs, ns), pares);
+      r.piezas.forEach(k => {
+        const p = PIEZAS[k], cat = p.cat(t), xs = enCat(cat);
+        if(p.lados){
+          ['derecho','izquierdo'].forEach(l => { const x = xs.find(y => new RegExp(l,'i').test(y.material)); sumar(k, `${cat} ${l}`, x, pares); });
+        } else if(p.color){
+          const col = colores[k] || '';
+          const x = col ? xs.find(y => norm(etiqueta(y)) === norm(col)) : null;
+          sumar(k, col ? `${cat} ${col}` : `${cat} (elige color)`, x, pares * p.q, { sinColor: !col });
+        } else {
+          const x = p.mat ? xs.find(y => p.mat(t).test(y.material)) : xs[0];
+          sumar(k, x ? x.material : cat, x, pares * p.q);
+        }
+      });
+    });
+    return [...lineas.values()];
+  }
+  // colores disponibles para una pieza (une grande y pequeña)
+  function opcionesColor(k){
+    const p = PIEZAS[k], s = new Set();
+    [34,46].forEach(t => enCat(p.cat(t)).forEach(x => s.add(etiqueta(x))));
+    return [...s].sort((a,b) => a.localeCompare(b,'es'));
+  }
+  let coloresBota = null;
+  async function cargarColores(){
+    if(coloresBota) return coloresBota;
+    try{
+      const r = await llamarOrig('obtenerInventario'); const g = {};
+      (r.filas||[]).forEach(f => { (g[f.modelo] = g[f.modelo] || new Set()).add(f.color); });
+      coloresBota = Object.fromEntries(Object.entries(g).map(([m,s]) => [m, [...s]]));
+    }catch(e){ coloresBota = {}; }
+    return coloresBota;
+  }
+
   // ---------- vista: nueva orden ----------
   function vNueva(){
     header(cabecera('Nueva orden de trabajo'));
@@ -214,14 +340,20 @@
     formPintado = true;
     const cola = colaMaquila();
     let tipo = 'maquila';
+    const R = { modelo:'', color:'', suela:'', tallas:{}, colores:{} };
     $('#app').innerHTML = CSS + `<div class="ot-form">
       <div class="ot-tip"><button data-t="maquila" class="on">🏭 Maquila</button><button data-t="higher">👢 Higher</button></div>
+      <label><small>Modelo (para sacar la materia prima)</small><select id="otMod">
+        <option value="">— Sin modelo (orden libre, no descuenta) —</option>
+        ${Object.keys(RECETAS).map(m=>`<option>${esc(m)}</option>`).join('')}
+      </select></label>
+      <div id="otRec"></div>
       <div class="ot-2">
         <label><small>N° de orden</small><input id="otNum" inputmode="numeric" value="${proximoNum()}"></label>
         <label><small>Pares</small><input id="otPares" inputmode="numeric" placeholder="Ej: 50"></label>
       </div>
       <label><small id="otCliT">Cliente de la maquila</small><input id="otCli" placeholder="Ej: nombre del cliente"></label>
-      <label><small>Descripción (modelo, colores, tallas…)</small><textarea id="otDesc" placeholder="Ej: Botín Urban rojo, tallas 36 a 42"></textarea></label>
+      <label><small id="otDescT">Descripción (modelo, colores, tallas…)</small><textarea id="otDesc" placeholder="Ej: Botín Urban rojo, tallas 36 a 42"></textarea></label>
       <div class="ot-2">
         <label><small>Fecha de entrega</small><input id="otFecha" type="date"></label>
         <label id="otPosL"><small>Prioridad en maquila</small><select id="otPos">
@@ -229,6 +361,7 @@
           <option value="${cola.length+1}" selected>#${cola.length+1} (al final de la cola)</option>
         </select></label>
       </div>
+      <div id="otMat"></div>
       <button class="btn" id="otCrear">Crear orden de trabajo</button>
     </div>`;
     document.querySelectorAll('.ot-tip button').forEach(b => b.onclick = () => {
@@ -237,13 +370,82 @@
       $('#otPosL').style.visibility = tipo==='maquila' ? '' : 'hidden';
       $('#otCliT').textContent = tipo==='maquila' ? 'Cliente de la maquila' : 'Cliente (opcional)';
     });
+
+    const totalPares = () => Object.values(R.tallas).reduce((a,b)=>a+b,0);
+    const resumenTallas = () => Object.entries(R.tallas).filter(([,p])=>p).map(([t,p])=>`T${t}×${p}`).join(', ');
+
+    async function pintarRec(){
+      const box = $('#otRec');
+      if(!R.modelo){ box.innerHTML=''; $('#otMat').innerHTML=''; $('#otPares').readOnly=false; $('#otDescT').textContent='Descripción (modelo, colores, tallas…)'; return; }
+      const rec = RECETAS[R.modelo];
+      box.innerHTML = '<div class="empty" style="padding:8px 0">Cargando colores…</div>';
+      const cols = (await cargarColores())[R.modelo] || [];
+      if(!R.suela || !rec.suelas.includes(R.suela)) R.suela = rec.suelas[0];
+      box.innerHTML = `
+        <div class="ot-2">
+          <label><small>Color de la bota</small><select id="otCol">
+            <option value="">— Elige —</option>${cols.map(c=>`<option ${c===R.color?'selected':''}>${esc(c)}</option>`).join('')}
+          </select></label>
+          <label><small>Suela</small><select id="otSue" ${rec.suelas.length<2?'disabled':''}>${rec.suelas.map(s=>`<option ${s===R.suela?'selected':''}>${esc(s)}</option>`).join('')}</select></label>
+        </div>
+        <label><small>Pares por talla</small></label>
+        <div class="ot-tallas">${TALLAS.map(t=>`<label><small>T${t}</small><input data-t="${t}" inputmode="numeric" value="${R.tallas[t]||''}" placeholder="0"></label>`).join('')}</div>`;
+      $('#otPares').readOnly = true;
+      $('#otDescT').textContent = 'Notas adicionales (opcional)';
+      $('#otCol').onchange = e => { R.color = e.target.value; R.colores = {}; pintarMat(); };
+      $('#otSue').onchange = e => { R.suela = e.target.value; pintarMat(); };
+      box.querySelectorAll('.ot-tallas input').forEach(i => i.oninput = () => {
+        const v = parseInt(i.value,10); R.tallas[i.dataset.t] = v>0 ? v : 0; pintarMat();
+      });
+      pintarMat();
+    }
+
+    function pintarMat(){
+      const box = $('#otMat'); if(!R.modelo){ box.innerHTML=''; return; }
+      $('#otPares').value = totalPares() || '';
+      const rec = RECETAS[R.modelo];
+      const conColor = rec.piezas.filter(k => PIEZAS[k].color);
+      conColor.forEach(k => { if(R.colores[k] === undefined) R.colores[k] = sugerir(opcionesColor(k), R.color, R.modelo, k); });
+      if(!totalPares()){ box.innerHTML = '<div class="ot-mat-t">Escribe los pares por talla para ver qué hay que sacar de bodega.</div>'; return; }
+      const lineas = calcular(R.modelo, R.suela, R.tallas, R.colores);
+      const fila = l => {
+        const hay = l.x ? l.x.cantidad : null, falta = !l.x, poco = l.x && l.x.cantidad < l.q;
+        return `<div class="ot-ml ${falta||poco?'mal':''}"><span>${esc(l.x ? l.x.material : l.nombre)}</span>
+          <b>${fmt(l.q)} ${esc(l.x ? l.x.unidad : '')}</b>
+          <small>${falta ? (l.sinColor ? 'Elige el color arriba' : 'No existe en materia prima') : `hay ${fmt(hay)}${poco?' · NO alcanza':''}`}</small></div>`;
+      };
+      box.innerHTML = `<div class="ot-mat-t">📋 Materia prima para esta orden <span class="ot-ayuda">se descuenta al crear la orden</span></div>
+        ${conColor.length ? `<div class="ot-cols">${conColor.map(k=>{ const ops = opcionesColor(k);
+          return `<label><small>${esc(PIEZAS[k].n)}</small><select data-k="${k}"><option value="">— Elige color —</option>${ops.map(o=>`<option ${norm(o)===norm(R.colores[k])?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`; }).join('')}</div>` : ''}
+        <div class="ot-mlist">${lineas.map(fila).join('')}</div>`;
+      box.querySelectorAll('.ot-cols select').forEach(s => s.onchange = () => { R.colores[s.dataset.k] = s.value; pintarMat(); });
+      box._lineas = lineas;
+    }
+    $('#otMod').onchange = e => { R.modelo = e.target.value; R.color=''; R.colores={}; R.tallas={}; pintarRec(); };
+
     $('#otCrear').onclick = async () => {
       const num = parseInt($('#otNum').value, 10);
-      const cli = limpio($('#otCli').value), desc = limpio($('#otDesc').value);
-      const pares = parseInt($('#otPares').value, 10) || 0, fecha = $('#otFecha').value || '';
+      const cli = limpio($('#otCli').value);
+      let desc = limpio($('#otDesc').value);
+      let pares = parseInt($('#otPares').value, 10) || 0;
+      const fecha = $('#otFecha').value || '';
       if(!num || num < 1) return toast('Escribe un número de orden válido');
       if(S.ot.some(o => o.num === num)) return toast(`Ya existe la orden N° ${num}`);
       if(tipo==='maquila' && !cli) return toast('Escribe el cliente de la maquila');
+      let lineas = [];
+      if(R.modelo){
+        if(!R.color) return toast('Elige el color de la bota');
+        if(!totalPares()) return toast('Escribe los pares por talla');
+        lineas = calcular(R.modelo, R.suela, R.tallas, R.colores);
+        if(lineas.some(l => l.sinColor)) return toast('Falta elegir el color de alguna marquilla');
+        const faltan = lineas.filter(l => !l.x), poco = lineas.filter(l => l.x && l.x.cantidad < l.q);
+        if(faltan.length || poco.length){
+          const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${l.x.material}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
+          if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Se descuenta lo que sí exista.`)) return;
+        }
+        pares = totalPares();
+        desc = limpio(`${R.modelo} ${R.color} · suela ${R.suela} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
+      }
       const b = $('#otCrear'); b.disabled = true; b.textContent = 'Guardando…';
       const pos = tipo==='maquila' ? Number($('#otPos').value) : 0;
       const nombre = `OT ${num} | ${tipo==='maquila'?'M':'H'} | ${cli} | ${desc} | ${pares} | ${fecha}`;
@@ -251,13 +453,22 @@
       try{
         await llamar('mpAgregar', nombre, CAT, 'orden', 0, pos);
         if(tipo==='maquila'){
-          // corre las que quedan después de la nueva
           const c = colaMaquila(); const ps = [];
           c.forEach((o,k) => { const nueva = k+1 >= pos ? k+2 : k+1; if(o.pos !== nueva){ o.pos = nueva; ps.push(llamar('mpFijarMinimo', o.id, nueva)); } });
           await Promise.all(ps);
         }
-        toast(`Orden de trabajo N° ${num} creada`);
-        S.pend--; estado(); S.vista = 'otLista'; formPintado = false; ultimoMp = null;
+        // descuenta la materia prima de la receta
+        const nota = `OT ${num} · ${R.modelo} ${R.color}`;
+        const fallos = [];
+        for(const l of lineas.filter(l => l.x)){
+          try{ await llamar('mpAjustar', l.x.id, -l.q, false, nota); }
+          catch(e){ fallos.push(`${l.x.material} (${e.message||e})`); }
+        }
+        S.pend--; estado();
+        if(fallos.length){
+          alert(`La orden N° ${num} se creó, pero NO se pudo descontar:\n\n${fallos.join('\n')}\n\nDescuéntalo a mano en Materia prima.`);
+        } else toast(lineas.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`);
+        S.vista = 'otLista'; formPintado = false; ultimoMp = null;
         await cargar();
       }catch(e){
         S.pend--; estado(); toast('Error: ' + (e.message||e));
