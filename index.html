@@ -350,7 +350,13 @@ async function cargar(silencioso){
   try{
     if(S.pend || !PIN) return;
     if(S.sec==='bodega'){ const r = await llamar('obtenerInventario'); if(S.pend) return; S.filas = r.filas; }
-    else { const r = await llamar('mpObtener'); if(S.pend) return; S.mp = r.filter(x=>!(String(x.categoria)==='Marquillas' && String(x.material)==='Caucho garra grande derecho')); }
+    else { const r = await llamar('mpObtener'); if(S.pend) return; S.mp = r.filter(x=>!(String(x.categoria)==='Marquillas' && String(x.material)==='Caucho garra grande derecho'));
+      // Slider Race: se maneja como grande y pequeño; el registro general queda oculto
+      if(S.mp.some(x=>x.material==='Slider Race grande')) S.mp = S.mp.filter(x=>x.material!=='Slider Race');
+      else if((ROL==='admin'||ROL==='mp') && !window.__sliderGP){ window.__sliderGP = true;
+        Promise.all([llamar('mpAgregar','Slider Race grande','Slider Race','pares',0,12), llamar('mpAgregar','Slider Race pequeño','Slider Race','pares',0,12)])
+          .then(()=>{ toast('Slider Race grande y pequeño creados'); cargar(true); }).catch(e=>{ window.__sliderGP=false; }); }
+    }
     S.err=false; render();
   }catch(e){ S.err=true; estado(); if(!silencioso) toast('Error: '+(e.message||e)); }
 }
@@ -738,7 +744,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden && PIN) c
 iniciar();
 </script>
   <script src="pedidos.js?v=5"></script>
-  <script src="ordenes.js?v=11"></script>
+  <script src="ordenes.js?v=12"></script>
   <script src="segundas.js?v=2"></script>
   <script>
   /* Botones Seleccionar todo / Deseleccionar todo en el Pedido de marquillas */
