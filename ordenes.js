@@ -282,8 +282,9 @@
       if(w) return w;
     }
     return opciones.find(o => raiz(o) === c)
-      || (/celeste/.test(c) && opciones.find(o => raiz(o) === 'azul clar'))
+      || (/celest/.test(c) && opciones.find(o => raiz(o) === 'azul clar'))
       || opciones.find(o => raiz(o) === c.split(' ')[0])
+      || opciones.find(o => raiz(o) === 'en '+c)
       || opciones.find(o => raiz(o) === raiz('en blanco y '+colorBota))
       || '';
   }
