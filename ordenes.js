@@ -260,7 +260,7 @@
     adventure:  { n:'Caucho Adventure',            cat:()=>'Caucho Adventure', q:2 },
     garraPG:    { n:'Caucho garra',                cat:t=>grande(t)?'Caucho garra grande':'Caucho garra pequeña', lados:true },
     garra:      { n:'Caucho garra estándar',       cat:()=>'Caucho garra', lados:true },
-    slider:     { n:'Slider Race',                 cat:()=>'Slider Race', q:1 }
+    slider:     { n:'Slider Race',                 cat:()=>'Slider Race', mat:t=>grande(t)?/grande/i:/peque/i, q:1 }
   };
   const RANGO_TOURING = t => t<=36?'35-36':t<=38?'37-38':t<=40?'39-40':t<=42?'41-42':t<=44?'43-44':'45-46';
   const SUELAS = {
@@ -338,7 +338,7 @@
           const x = col ? xs.find(y => norm(etiqueta(y)) === norm(col)) : null;
           sumar(k, col ? `${cat} ${col}` : `${cat} (elige color)`, x, pares * p.q, { sinColor: !col });
         } else {
-          const x = p.mat ? xs.find(y => p.mat(t).test(y.material)) : xs[0];
+          const x = p.mat ? (xs.find(y => p.mat(t).test(y.material)) || (xs.length===1 ? xs[0] : null)) : xs[0];
           sumar(k, x ? x.material : cat, x, pares * p.q);
         }
       });
