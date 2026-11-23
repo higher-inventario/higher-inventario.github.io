@@ -49,7 +49,10 @@
   function extraer(){
     if(!Array.isArray(S.mp) || S.mp === ultimoMp) return;
     const esta = x => x.categoria === CAT || esOT(x.material);
-    if(S.mp.length){ S.ot = S.mp.filter(esta).map(parse); otListo = true; }
+    // solo reemplaza la lista cuando llegan datos frescos con órdenes (otras partes de la app filtran S.mp y dejan un arreglo sin ellas)
+    const ots = S.mp.filter(esta);
+    if(ots.length){ S.ot = ots.map(parse); otListo = true; }
+    else if(S.mp.length && !otListo){ S.ot = []; otListo = true; }
     S.mp = S.mp.filter(x => !esta(x));
     ultimoMp = S.mp;
   }
