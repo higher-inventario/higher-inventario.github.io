@@ -24,7 +24,7 @@
     ['Anulada',            '#555555']
   ];
   const CERRADA = 6; // desde "Entregada" en adelante ya no está activa
-  const esOT = n => /^OT\s*\d+\s*\|/.test(String(n||''));
+  const esOT = n => /^OT\s*[A-Za-z]*\s*\d+\s*\|/.test(String(n||''));
   const limpio = s => String(s||'').replace(/\|/g,'/').replace(/\s+/g,' ').trim();
 
   S.ot = []; let ultimoMp = null, otListo = false, formPintado = false;
@@ -33,7 +33,8 @@
     const p = String(x.material).split('|').map(s=>s.trim());
     return {
       id: x.id,
-      num: parseInt(String(p[0]).replace(/\D/g,''),10) || 0,
+      num: String(p[0]).replace(/^OT\s*/i,'').replace(/\s+/g,'').toUpperCase() || '0',
+      n: parseInt(String(p[0]).replace(/\D/g,''),10) || 0,
       tipo: p[1] === 'M' ? 'maquila' : 'higher',
       cliente: p[2] || '',
       desc: p[3] || '',
@@ -101,11 +102,11 @@
     return { txt:`Entrega ${fecha} · faltan ${dias} días`, cls:'' };
   }
   const activas = () => S.ot.filter(o => o.estado < CERRADA);
-  const porFecha = (a,b) => (a.entrega||'9999').localeCompare(b.entrega||'9999') || a.num - b.num;
+  const porFecha = (a,b) => (a.entrega||'9999').localeCompare(b.entrega||'9999') || a.n - b.n || String(a.num).localeCompare(String(b.num));
   const colaMaquila = () => activas().filter(o => o.tipo==='maquila').sort((a,b) => (a.pos||9999) - (b.pos||9999) || porFecha(a,b));
   const higherActivas = () => activas().filter(o => o.tipo!=='maquila').sort(porFecha);
-  const cerradas = () => S.ot.filter(o => o.estado >= CERRADA).sort((a,b) => b.num - a.num);
-  const proximoNum = () => S.ot.reduce((m,o) => Math.max(m, o.num), 0) + 1;
+  const cerradas = () => S.ot.filter(o => o.estado >= CERRADA).sort((a,b) => b.n - a.n);
+  const proximoNum = () => { const u = S.ot.reduce((m,o) => o.n > m.n ? o : m, { n:0, num:'R' }); const pre = (String(u.num).match(/^[A-Z]+/) || ['R'])[0]; return pre + String(u.n + 1).padStart(3,'0'); };
 
   // guarda en el servidor en UNA sola llamada; la pantalla ya se actualizó antes (instantáneo)
   async function enviar(op, ok, alFallar){
@@ -260,7 +261,9 @@
     adventure:  { n:'Caucho Adventure',            cat:()=>'Caucho Adventure', q:2 },
     garraPG:    { n:'Caucho garra',                cat:t=>grande(t)?'Caucho garra grande':'Caucho garra pequeña', lados:true },
     garra:      { n:'Caucho garra estándar',       cat:()=>'Caucho garra', lados:true },
-    slider:     { n:'Slider Race',                 cat:()=>'Slider Race', mat:t=>grande(t)?/grande/i:/peque/i, q:1 }
+    slider:     { n:'Slider Race',                 cat:()=>'Slider Race', mat:t=>grande(t)?/grande/i:/peque/i, q:1 },
+    kidsCanilla:{ n:'Caucho kids canilla',         cat:()=>'Caucho kids canilla', color:true, q:2 },
+    kidsTalon:  { n:'Caucho kids talón',           cat:()=>'Caucho kids talón', color:true, q:2 }
   };
   const RANGO_TOURING = t => t<=36?'35-36':t<=38?'37-38':t<=40?'39-40':t<=42?'41-42':t<=44?'43-44':'45-46';
   const SUELAS = {
@@ -284,9 +287,13 @@
     'Bota Fusión':            { suelas:['2289','Sprint Brazil'], piezas:['correa','garra'] },
     'Bota Fusión Force':      { suelas:FUERZA,      piezas:['correa','garra'] },
     'Botín Force':            { suelas:['2289','Sprint Brazil'], piezas:[] },
-    'Botín Force Industrial': { suelas:FUERZA,      piezas:[] }
+    'Botín Force Industrial': { suelas:FUERZA,      piezas:[] },
+    'Bota Kids':              { suelas:[],          piezas:['kidsCanilla','kidsTalon'], tallas:[29,30,31,32,33,34,35] }
   };
   const TALLAS = [34,35,36,37,38,39,40,41,42,43,44,45,46];
+  const esRace = m => /race/i.test(m||'') && !/touring/i.test(m||'');
+  const nomSuela = (m,s) => !s ? 'Sin suela' : (esRace(m) && s==='Touring' ? 'Race' : s);
+  const sinTouring = (m,s) => esRace(m) ? String(s).replace(/Suela para modelos Touring/gi,'Suela Race').replace(/\s*Urban y Touring/gi,'').replace(/\s*Touring/gi,'').replace(/\s+/g,' ').trim() : s;
 
   const norm = s => slug(s).replace(/-/g,' ');
   const enCat = c => S.mp.filter(x => norm(x.categoria) === norm(c));
@@ -327,8 +334,7 @@
     };
     Object.entries(tallas).forEach(([ts, pares]) => {
       const t = Number(ts); if(!pares) return;
-      const [cs, ns] = SUELAS[suela](t);
-      sumar('suela', ns, buscar(cs, ns), pares);
+      if(SUELAS[suela]){ const [cs, ns] = SUELAS[suela](t); sumar('suela', ns, buscar(cs, ns), pares); }
       r.piezas.forEach(k => {
         const p = PIEZAS[k], cat = p.cat(t), xs = enCat(cat);
         if(p.lados){
@@ -378,7 +384,11 @@
       </select></label>
       <div id="otRec"></div>
       <div class="ot-2">
-        <label><small>N° de orden</small><input id="otNum" inputmode="numeric" value="${proximoNum()}"></label>
+        <label><small>Tipo de horma</small><input id="otHorma" placeholder="Escribe la horma"></label>
+        <label><small>Puntera</small><select id="otPunt"><option value="">— Elige —</option><option>Sin puntera</option><option>Puntera delgada</option><option>Puntera gruesa</option></select></label>
+      </div>
+      <div class="ot-2">
+        <label><small>N° de orden</small><input id="otNum" autocapitalize="characters" maxlength="10" style="text-transform:uppercase" placeholder="Ej: R123" value="${proximoNum()}"></label>
         <label><small>Pares</small><input id="otPares" inputmode="numeric" placeholder="Ej: 50"></label>
       </div>
       <label><small id="otCliT">Cliente de la maquila</small><input id="otCli" placeholder="Ej: nombre del cliente"></label>
@@ -415,10 +425,10 @@
           <label><small>Color de la bota</small><select id="otCol">
             <option value="">— Elige —</option>${cols.map(c=>`<option ${c===R.color?'selected':''}>${esc(c)}</option>`).join('')}
           </select></label>
-          <label><small>Suela</small><select id="otSue" ${rec.suelas.length<2?'disabled':''}>${rec.suelas.map(s=>`<option ${s===R.suela?'selected':''}>${esc(s)}</option>`).join('')}</select></label>
+          <label><small>Suela</small><select id="otSue" ${rec.suelas.length<2?'disabled':''}>${rec.suelas.length ? rec.suelas.map(s=>`<option value="${esc(s)}" ${s===R.suela?'selected':''}>${esc(nomSuela(R.modelo, s))}</option>`).join('') : '<option value="">Sin suela</option>'}</select></label>
         </div>
         <label><small>Pares por talla</small></label>
-        <div class="ot-tallas">${TALLAS.map(t=>`<label><small>T${t}</small><input data-t="${t}" inputmode="numeric" value="${R.tallas[t]||''}" placeholder="0"></label>`).join('')}</div>`;
+        <div class="ot-tallas">${(rec.tallas||TALLAS).map(t=>`<label><small>T${t}</small><input data-t="${t}" inputmode="numeric" value="${R.tallas[t]||''}" placeholder="0"></label>`).join('')}</div>`;
       $('#otPares').readOnly = true;
       $('#otDescT').textContent = 'Notas adicionales (opcional)';
       $('#otCol').onchange = e => { R.color = e.target.value; R.colores = {}; pintarMat(); };
@@ -439,13 +449,13 @@
       const lineas = calcular(R.modelo, R.suela, R.tallas, R.colores);
       const fila = l => {
         const hay = l.x ? l.x.cantidad : null, falta = !l.x, poco = l.x && l.x.cantidad < l.q;
-        return `<div class="ot-ml ${falta||poco?'mal':''}"><span>${esc(l.x ? nombreMat(l.x) : l.nombre)}</span>
+        return `<div class="ot-ml ${falta||poco?'mal':''}"><span>${esc(sinTouring(R.modelo, l.x ? nombreMat(l.x) : l.nombre))}</span>
           <b>${fmt(l.q)} ${esc(l.x ? l.x.unidad : '')}</b>
           <small>${falta ? (l.sinColor ? 'Elige el color arriba' : 'No existe en materia prima') : `hay ${fmt(hay)}${poco?' · NO alcanza':''}`}</small></div>`;
       };
       box.innerHTML = `<div class="ot-mat-t">📋 Materia prima para esta orden <span class="ot-ayuda">se descuenta al crear la orden</span></div>
         ${conColor.length ? `<div class="ot-cols">${conColor.map(k=>{ const ops = opcionesColor(k);
-          return `<label><small>${esc(PIEZAS[k].n)}</small><select data-k="${k}"><option value="">— Elige color —</option>${ops.map(o=>`<option ${norm(o)===norm(R.colores[k])?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`; }).join('')}</div>` : ''}
+          return `<label><small>${esc(sinTouring(R.modelo, PIEZAS[k].n))}</small><select data-k="${k}"><option value="">— Elige color —</option>${ops.map(o=>`<option ${norm(o)===norm(R.colores[k])?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`; }).join('')}</div>` : ''}
         <div class="ot-mlist">${lineas.map(fila).join('')}</div>`;
       box.querySelectorAll('.ot-cols select').forEach(s => s.onchange = () => { R.colores[s.dataset.k] = s.value; pintarMat(); });
       box._lineas = lineas;
@@ -453,12 +463,12 @@
     $('#otMod').onchange = e => { R.modelo = e.target.value; R.color=''; R.colores={}; R.tallas={}; pintarRec(); };
 
     $('#otCrear').onclick = async () => {
-      const num = parseInt($('#otNum').value, 10);
+      const num = String($('#otNum').value).replace(/\s+/g,'').toUpperCase();
       const cli = limpio($('#otCli').value);
       let desc = limpio($('#otDesc').value);
       let pares = parseInt($('#otPares').value, 10) || 0;
       const fecha = $('#otFecha').value || '';
-      if(!num || num < 1) return toast('Escribe un número de orden válido');
+      if(!/^[A-Z]{0,3}\d{1,6}$/.test(num)) return toast('Escribe un número de orden válido (ej: R123)');
       if(S.ot.some(o => o.num === num)) return toast(`Ya existe la orden N° ${num}`);
       if(tipo==='maquila' && !cli) return toast('Escribe el cliente de la maquila');
       let lineas = [];
@@ -469,12 +479,15 @@
         if(lineas.some(l => l.sinColor)) return toast('Falta elegir el color de alguna marquilla');
         const faltan = lineas.filter(l => !l.x), poco = lineas.filter(l => l.x && l.x.cantidad < l.q);
         if(faltan.length || poco.length){
-          const msg = [...faltan.map(l=>`• ${l.nombre}: no existe en materia prima`), ...poco.map(l=>`• ${nombreMat(l.x)}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
+          const msg = [...faltan.map(l=>`• ${sinTouring(R.modelo, l.nombre)}: no existe en materia prima`), ...poco.map(l=>`• ${sinTouring(R.modelo, nombreMat(l.x))}: necesitas ${fmt(l.q)}, hay ${fmt(l.x.cantidad)}`)].join('\n');
           if(!confirm(`Ojo, falta materia prima:\n\n${msg}\n\n¿Crear la orden igual? Lo que falta queda en negativo y pasa solo a Materia prima → Pedido → Pedido materia prima urgentes.`)) return;
         }
         pares = totalPares();
-        desc = limpio(`${R.modelo} ${R.color} · suela ${R.suela} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
+        desc = limpio(`${R.modelo} ${R.color} · suela ${nomSuela(R.modelo, R.suela)} · ${resumenTallas()}${desc ? ' · '+desc : ''}`);
       }
+      const horma = limpio($('#otHorma').value), punt = $('#otPunt').value;
+      const extraHP = [horma ? 'Horma: ' + horma : '', punt].filter(Boolean).join(' · ');
+      if(extraHP) desc = desc ? desc + ' · ' + extraHP : extraHP;
       const pos = tipo==='maquila' ? Number($('#otPos').value) : 0;
       // materia prima: se descuenta todo (si no alcanza queda en negativo y pasa al Pedido urgente)
       const ajustes = lineas.filter(l => l.x).map(l => ({ id:l.x.id, delta:-l.q }));
@@ -507,7 +520,7 @@
       const ms = (await llamarOrig('mpMovimientos', 300)).filter(m => esOT(m.material));
       if(S.vista !== 'otMovs' || S.sec !== 'ot') return;
       $('#app').innerHTML = ms.length ? ms.map(m => {
-        const n = String(m.material).match(/^OT\s*(\d+)/);
+        const n = String(m.material).match(/^OT\s*([A-Za-z]*\s*\d+)/);
         return `<div class="item mov" style="cursor:default"><div style="flex:1">
           <div class="n">Orden de trabajo N° ${n?n[1]:''}</div>
           <div class="s">${esc(m.fecha)} · ${esc(m.nota || ESTADOS[Math.round(m.despues)||0]?.[0] || '')}${m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div></div>`;
