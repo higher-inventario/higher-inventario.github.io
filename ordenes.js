@@ -32,8 +32,11 @@
   const SECCIONES = 8; // Programación … Almacén
   const VIEJO = [0, 1, 3, 5, 6, 7, 8, 9]; // estados viejos 0-7: Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
   const COD = i => ESTADOS[i][3];
-  const MAQ = 4; // sección Maquila: además de las que están en esa etapa, muestra todas las órdenes de tipo maquila activas
-  const enSeccion = (o, i) => o.estado === i || (i === MAQ && o.tipo === 'maquila' && o.estado < 8);
+  /* "Maquila" no es una tarjeta ni una hoja: es un destino que se elige en la lista de la orden.
+     Las órdenes que están en maquila se ven (e imprimen) dentro de Costura, con su etiqueta. */
+  const MAQ = 4, COSTURA = 3;
+  const enSeccion = (o, i) => o.estado === i || (i === COSTURA && o.estado === MAQ);
+  const siguiente = e => e === COSTURA || e === MAQ ? MAQ + 1 : e + 1; // de Costura o Maquila pasa a Montaje
   const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? ESTADOS.findIndex(e => e[3] === v) : (VIEJO[v] ?? 0); return i < 0 ? 0 : i; };
   window.OT_CERRADA = CERRADA;
   const esOT = n => /^OT\s*[A-Za-z]*\s*\d+\s*\|/.test(String(n||''));
@@ -192,11 +195,11 @@
       ${pos ? `<div class="ot-pos">${pos}</div>` : `<div class="ot-pos h">${maq?'M':'H'}</div>`}
       <div class="ot-b">
         <div class="ot-t">Orden de trabajo N° ${o.num} <span class="ot-tipo ${maq?'':'h'}">${maq?'Maquila':'Higher'}</span>
-          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && (S.otSec<0 || (S.otSec===MAQ && o.estado!==MAQ))?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
+          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && (S.otSec<0 || o.estado===MAQ)?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
-          ${o.estado < SECCIONES-1 && !o.tmp ? `<button class="cp-tras" data-a="${o.estado+1}">Trasladar a ${ESTADOS[o.estado+1][2]} ${ESTADOS[o.estado+1][0]} →</button>` : ''}
+          ${o.estado < SECCIONES-1 && !o.tmp ? `<button class="cp-tras" data-a="${siguiente(o.estado)}">Trasladar a ${ESTADOS[siguiente(o.estado)][2]} ${ESTADOS[siguiente(o.estado)][0]} →</button>` : ''}
           <select class="ot-est" ${o.tmp?'disabled title="Guardando…"':''}>${ESTADOS.map(([t],i)=>`<option value="${i}" ${i===o.estado?'selected':''}>${t}</option>`).join('')}</select>
           ${pos?`<button class="ot-mv" data-d="-1" ${pos===1?'disabled':''} title="Subir prioridad">↑</button><button class="ot-mv" data-d="1" ${pos===total?'disabled':''} title="Bajar prioridad">↓</button>`:''}
         </div>
@@ -205,7 +208,7 @@
 
   if(S.otSec === undefined) S.otSec = null; // null = ninguna abierta · -1 = Total planta
   const CSS_CP = `<style>
-    .cp-secs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+    .cp-secs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
     @media (max-width:640px){.cp-secs{grid-template-columns:repeat(2,1fr)}}
     .cp-sec{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:11px 12px 9px 15px;cursor:pointer;text-align:left;color:var(--txt);font:inherit}
     .cp-sec:before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
@@ -237,7 +240,7 @@
     const tarjetaSec = (i, ic, nom, col, lista, extra='') =>
       `<button class="cp-sec ${sel===i?'on':''}" data-s="${i}" style="--c:${col}"><span class="i">${ic}</span><span class="nm">${nom}</span><span class="n">${lista.length}</span><span class="p">${fmt(pares(lista))} pares${extra}</span></button>`;
     const total = tarjetaSec(-1, '🏭', 'Total planta', 'var(--acc)', act, atrasadas ? ` · <span class="warn">${atrasadas} atrasada${atrasadas===1?'':'s'}</span>` : '');
-    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => enSeccion(o, i)))).join('');
+    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => i === MAQ ? '' : tarjetaSec(i, ic, n, c, act.filter(o => enSeccion(o, i)))).join('');
     const lista = [...colaV, ...hig], visibles = lista.length;
     $('#app').innerHTML = CSS + CSS_CP + `
       <div class="cp-secs">${total}${secs}</div>
@@ -290,11 +293,10 @@
   const GRUPOS = {
     corte:     { nombre:'Corte',     secs:[0,1,2], ic:'✂️', sub:'Programación · Troquelado · Alistamiento' },
     costura:   { nombre:'Costura',   secs:[3], ic:'🧵' },
-    maquila:   { nombre:'Maquila',   secs:[4], ic:'🤝' },
     montaje:   { nombre:'Montaje',   secs:[5], ic:'🔨' },
     terminado: { nombre:'Terminado', secs:[6], ic:'✨' },
     almacen:   { nombre:'Almacén',   secs:[7], ic:'📦' },
-    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,4,5,6,7], ic:'📋', sub:'Las 8 secciones en una sola hoja' }
+    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,5,6,7], ic:'📋', sub:'Las 7 secciones en una sola hoja' }
   };
   function elegirImpresion(){
     const d = document.createElement('div'); d.className = 'cp-velo';
@@ -327,19 +329,19 @@
       <div class="pie"><span>HGR Higher · ${FORMATO.codigo} v${FORMATO.version} · Documento controlado — prohibida su modificación sin autorización</span><span>Impreso ${hoy}</span></div>`;
     let cuerpo;
     if(k === 'todo'){
-      const por = g.secs.map(i => ords(i, true)), filas = Math.max(14, ...por.map(l => l.length));
+      const por = g.secs.map(i => ords(i)), filas = Math.max(14, ...por.map(l => l.length));
       let h = '<tr>' + g.secs.map(i => `<th colspan="3" class="sc">${ESTADOS[i][0]}</th>`).join('') + '</tr>';
       h += '<tr>' + g.secs.map(() => '<th>OT</th><th>Referencia</th><th>Cant</th>').join('') + '</tr>';
       for(let r = 0; r < filas; r++) h += '<tr>' + por.map(l => { const f = l[r]; return f ? `<td class="n">${escH(f.num)}</td><td>${escH(f.ref)}</td><td class="n">${f.pares}</td>` : '<td></td><td></td><td></td>'; }).join('') + '</tr>';
       h += '<tr class="tot">' + por.map(l => `<td colspan="2" style="text-align:right">Total</td><td class="n">${l.reduce((a,f)=>a+f.pares,0)}</td>`).join('') + '</tr>';
       const todas = por.flat();
       cuerpo = cab('Vista general de planta', todas.length, todas.reduce((a,f)=>a+f.pares,0)) + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
-        <table class="gen"><colgroup>${'<col style="width:3.4%"><col style="width:6.1%"><col style="width:3%">'.repeat(8)}</colgroup>${h}</table></div>` + pie;
+        <table class="gen"><colgroup>${'<col style="width:3.9%"><col style="width:6.9%"><col style="width:3.4%">'.repeat(7)}</colgroup>${h}</table></div>` + pie;
     } else {
       const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
       const tablas = g.secs.map(i => {
         const fs = ords(i), tot = fs.reduce((a,f)=>a+f.pares,0), nom = ESTADOS[i][0];
-        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}${i===MAQ && f.etapa!=='Maquila'?`<br><small>en ${f.etapa}</small>`:''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
+        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}${f.etapa==='Maquila'?' <small>(en maquila)</small>':''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
         for(let r = fs.length; r < FILAS_MIN; r++) tr += '<tr>' + '<td></td>'.repeat(8) + '</tr>';
         return `<div class="sec"><h3><span>${nom}</span><span>${fs.length} órdenes · ${tot} pares</span></h3><table>
           <tr><th style="width:11%">Orden</th><th style="width:19%">Cliente</th><th style="width:24%">Referencia</th><th style="width:7%">Talla</th><th style="width:8%">Cantidad</th><th style="width:9%">Entrega</th><th style="width:11%">Pasó a</th><th style="width:11%">Firma / ✓</th></tr>
