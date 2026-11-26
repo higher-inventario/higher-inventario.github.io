@@ -244,8 +244,10 @@ const FOTO_COLOR = {};
  'bota-touring-race--rojo.png','bota-touring-race--azul.png','bota-touring-race--fucsia.png','bota-touring-race--gris.png','bota-touring-race--neon.png',
  'botin-sport--gris-claro.jpg','botin-sport--cafe.jpg','botin-urban-go--rojo.jpg','botin-urban-go--morado.jpg','botin-urban-force--rojo.jpg','bota-fusion-force--negro.jpg','bota-touring-white--azul.jpg','bota-touring-force--fucsia.jpg','bota-race-white--fucsia.webp','bota-race--morado.webp','bota-kids--rosado.jpg'
 ].forEach(f=>{ FOTO_COLOR[f.replace(/\.[a-z]+$/,'')] = 'fotos/'+f; });
+/* modelos que usan las mismas fotos de otro modelo */
+const FOTO_IGUAL = { 'botin-sport-nobuck':'botin-sport', 'botin-sport-cuero':'botin-sport' };
 function foto(modelo, color){
-  const m = slug(modelo);
+  const m = FOTO_IGUAL[slug(modelo)] || slug(modelo);
   if(color && FOTO_COLOR[m+'--'+slug(color)]) return FOTO_COLOR[m+'--'+slug(color)];
   return FOTO_MODELO[m] ? 'fotos/'+m+'.'+FOTO_MODELO[m] : '';
 }
