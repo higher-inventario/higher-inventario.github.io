@@ -14,24 +14,25 @@
 (function(){
   const CAT = 'Ordenes de trabajo';
   /* CARGA DE PLANTA: secciones por las que pasa cada orden.
-     En el servidor se guarda 10 + posición (10 = Programación … 18 = Anulada).
+     En el servidor cada sección guarda su código fijo (columna 4); así se pueden agregar secciones sin mover las órdenes.
      Los valores viejos (0 a 7) se traducen con VIEJO para no perder órdenes antiguas. */
   const ESTADOS = [
-    ['Programación', '#8E8E93', '🗓️'],
-    ['Troquelado',   '#1E5BD8', '✂️'],
-    ['Alistamiento', '#6EC6F0', '📐'],
-    ['Costura',      '#7B3FB8', '🧵'],
-    ['Montaje',      '#F07A1A', '🔨'],
-    ['Terminado',    '#F5B300', '✨'],
-    ['Almacén',      '#22C55E', '📦'],
-    ['Entregada',    '#2E8B57', '✅'],
-    ['Anulada',      '#555555', '⛔']
+    ['Programación', '#8E8E93', '🗓️', 10],
+    ['Troquelado',   '#1E5BD8', '✂️', 11],
+    ['Alistamiento', '#6EC6F0', '📐', 12],
+    ['Costura',      '#7B3FB8', '🧵', 13],
+    ['Maquila',      '#E0218A', '🤝', 19],
+    ['Montaje',      '#F07A1A', '🔨', 14],
+    ['Terminado',    '#F5B300', '✨', 15],
+    ['Almacén',      '#22C55E', '📦', 16],
+    ['Entregada',    '#2E8B57', '✅', 17],
+    ['Anulada',      '#555555', '⛔', 18]
   ];
-  const CERRADA = 7; // desde "Entregada" en adelante ya no está activa
-  const SECCIONES = 7; // Programación … Almacén
-  const VIEJO = [0, 1, 3, 4, 5, 6, 7, 8]; // Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
-  const COD = i => 10 + i;
-  const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? v - 10 : (VIEJO[v] ?? 0); return Math.max(0, Math.min(ESTADOS.length-1, i)); };
+  const CERRADA = 8; // desde "Entregada" en adelante ya no está activa
+  const SECCIONES = 8; // Programación … Almacén
+  const VIEJO = [0, 1, 3, 5, 6, 7, 8, 9]; // estados viejos 0-7: Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
+  const COD = i => ESTADOS[i][3];
+  const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? ESTADOS.findIndex(e => e[3] === v) : (VIEJO[v] ?? 0); return i < 0 ? 0 : i; };
   window.OT_CERRADA = CERRADA;
   const esOT = n => /^OT\s*[A-Za-z]*\s*\d+\s*\|/.test(String(n||''));
   const limpio = s => String(s||'').replace(/\|/g,'/').replace(/\s+/g,' ').trim();
@@ -193,6 +194,7 @@
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
+          ${o.estado < SECCIONES-1 && !o.tmp ? `<button class="cp-tras" data-a="${o.estado+1}">Trasladar a ${ESTADOS[o.estado+1][2]} ${ESTADOS[o.estado+1][0]} →</button>` : ''}
           <select class="ot-est" ${o.tmp?'disabled title="Guardando…"':''}>${ESTADOS.map(([t],i)=>`<option value="${i}" ${i===o.estado?'selected':''}>${t}</option>`).join('')}</select>
           ${pos?`<button class="ot-mv" data-d="-1" ${pos===1?'disabled':''} title="Subir prioridad">↑</button><button class="ot-mv" data-d="1" ${pos===total?'disabled':''} title="Bajar prioridad">↓</button>`:''}
         </div>
@@ -201,7 +203,7 @@
 
   if(S.otSec === undefined) S.otSec = null; // null = ninguna abierta · -1 = Total planta
   const CSS_CP = `<style>
-    .cp-secs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+    .cp-secs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
     @media (max-width:640px){.cp-secs{grid-template-columns:repeat(2,1fr)}}
     .cp-sec{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:11px 12px 9px 15px;cursor:pointer;text-align:left;color:var(--txt);font:inherit}
     .cp-sec:before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
@@ -212,6 +214,7 @@
     .cp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 2px 10px}
     .cp-bar h2{margin:0;font-size:17px}.cp-bar h2 small{color:var(--sub);font-weight:500;font-size:13px;margin-left:6px}
     .cp-imp{background:#22C55E;color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer;font-size:13px;white-space:nowrap}
+    .cp-tras{border:1px solid var(--ec);background:transparent;color:var(--txt);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer}
     .cp-tag{font-size:11px;font-weight:700;color:var(--ec)}
     .cp-velo{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
     .cp-modal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;width:min(420px,92vw);max-height:90vh;overflow:auto}
@@ -266,6 +269,8 @@
         enviar({ nota:`OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`, fijar:[{ id:o.id, cantidad:COD(nuevo) }], minimos, ajustes },
           `Orden N° ${o.num}: ${ESTADOS[nuevo][0]}${extra}`).catch(()=>{});
       };
+      const tras = card.querySelector('.cp-tras');
+      if(tras && sel) tras.onclick = () => { sel.value = tras.dataset.a; sel.onchange(); };
       card.querySelectorAll('.ot-mv').forEach(b => b.onclick = () => {
         const c = colaMaquila(), i = c.indexOf(o), j = i + Number(b.dataset.d);
         if(i < 0 || j < 0 || j >= c.length) return;
@@ -283,10 +288,11 @@
   const GRUPOS = {
     corte:     { nombre:'Corte',     secs:[0,1,2], ic:'✂️', sub:'Programación · Troquelado · Alistamiento' },
     costura:   { nombre:'Costura',   secs:[3], ic:'🧵' },
-    montaje:   { nombre:'Montaje',   secs:[4], ic:'🔨' },
-    terminado: { nombre:'Terminado', secs:[5], ic:'✨' },
-    almacen:   { nombre:'Almacén',   secs:[6], ic:'📦' },
-    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,4,5,6], ic:'📋', sub:'Las 7 secciones en una sola hoja' }
+    maquila:   { nombre:'Maquila',   secs:[4], ic:'🤝' },
+    montaje:   { nombre:'Montaje',   secs:[5], ic:'🔨' },
+    terminado: { nombre:'Terminado', secs:[6], ic:'✨' },
+    almacen:   { nombre:'Almacén',   secs:[7], ic:'📦' },
+    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,4,5,6,7], ic:'📋', sub:'Las 8 secciones en una sola hoja' }
   };
   function elegirImpresion(){
     const d = document.createElement('div'); d.className = 'cp-velo';
@@ -326,7 +332,7 @@
       h += '<tr class="tot">' + por.map(l => `<td colspan="2" style="text-align:right">Total</td><td class="n">${l.reduce((a,f)=>a+f.pares,0)}</td>`).join('') + '</tr>';
       const todas = por.flat();
       cuerpo = cab('Vista general de planta', todas.length, todas.reduce((a,f)=>a+f.pares,0)) + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
-        <table class="gen"><colgroup>${'<col style="width:3.9%"><col style="width:6.9%"><col style="width:3.4%">'.repeat(7)}</colgroup>${h}</table></div>` + pie;
+        <table class="gen"><colgroup>${'<col style="width:3.4%"><col style="width:6.1%"><col style="width:3%">'.repeat(8)}</colgroup>${h}</table></div>` + pie;
     } else {
       const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
       const tablas = g.secs.map(i => {
