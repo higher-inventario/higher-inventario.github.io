@@ -199,7 +199,7 @@
       </div></div>`;
   }
 
-  if(S.otSec === undefined) S.otSec = -1; // -1 = Total planta
+  if(S.otSec === undefined) S.otSec = null; // null = ninguna abierta · -1 = Total planta
   const CSS_CP = `<style>
     .cp-secs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
     @media (max-width:640px){.cp-secs{grid-template-columns:repeat(2,1fr)}}
@@ -224,7 +224,7 @@
   function vLista(){
     header(cabecera('Carga de planta'));
     if(!otListo){ $('#app').innerHTML = '<div class="empty">Cargando…</div>'; return; }
-    const sel = S.otSec, enSec = o => sel < 0 || o.estado === sel;
+    const sel = S.otSec, abierta = sel !== null, enSec = o => abierta && (sel < 0 || o.estado === sel);
     const act = activas(), cer = cerradas();
     const cola = colaMaquila(), colaV = cola.filter(enSec), hig = higherActivas().filter(enSec);
     const pares = l => l.reduce((a,o) => a + (o.pares||0), 0);
@@ -233,21 +233,18 @@
       `<button class="cp-sec ${sel===i?'on':''}" data-s="${i}" style="--c:${col}"><span class="i">${ic}</span><span class="nm">${nom}</span><span class="n">${lista.length}</span><span class="p">${fmt(pares(lista))} pares${extra}</span></button>`;
     const total = tarjetaSec(-1, '🏭', 'Total planta', 'var(--acc)', act, atrasadas ? ` · <span class="warn">${atrasadas} atrasada${atrasadas===1?'':'s'}</span>` : '');
     const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => o.estado === i))).join('');
-    const visibles = colaV.length + hig.length;
+    const lista = [...colaV, ...hig], visibles = lista.length;
     $('#app').innerHTML = CSS + CSS_CP + `
       <div class="cp-secs">${total}${secs}</div>
-      <div class="cp-bar"><h2>${sel < 0 ? 'Todas las órdenes' : ESTADOS[sel][2]+' '+ESTADOS[sel][0]}<small>${visibles} órdenes · ${fmt(pares([...colaV, ...hig]))} pares</small></h2>
+      <div class="cp-bar"><h2>${!abierta ? 'Toca una sección para ver sus órdenes' : (sel < 0 ? '🏭 Todas las órdenes' : ESTADOS[sel][2]+' '+ESTADOS[sel][0]) + `<small>${visibles} órdenes · ${fmt(pares(lista))} pares</small>`}</h2>
         <button class="cp-imp" id="cpImp">🖨 Imprimir</button></div>
-      ${colaV.length ? `<div class="ot-sec">🏭 Maquila · prioridad <small>${colaV.length}</small></div>
-        <div class="ot-list">${colaV.map(o => tarjeta(o, cola.indexOf(o)+1, cola.length)).join('')}</div>` : ''}
-      ${hig.length ? `<div class="ot-sec">👢 Órdenes Higher <small>${hig.length}</small> <span class="ot-ayuda">por fecha de entrega</span></div>
-        <div class="ot-list">${hig.map(o=>tarjeta(o)).join('')}</div>` : ''}
-      ${!visibles && S.ot.length ? `<div class="empty" style="padding:18px 0">No hay órdenes en ${sel < 0 ? 'planta' : ESTADOS[sel][0]}</div>` : ''}
-      ${sel < 0 && cer.length ? `<details class="ot-cerr"><summary>✅ Entregadas y anuladas (${cer.length})</summary>
+      ${visibles ? `<div class="ot-list">${lista.map(o => o.tipo==='maquila' ? tarjeta(o, cola.indexOf(o)+1, cola.length) : tarjeta(o)).join('')}</div>` : ''}
+      ${abierta && !visibles && S.ot.length ? `<div class="empty" style="padding:18px 0">No hay órdenes en ${sel < 0 ? 'planta' : ESTADOS[sel][0]}</div>` : ''}
+      ${sel === -1 && cer.length ? `<details class="ot-cerr"><summary>✅ Entregadas y anuladas (${cer.length})</summary>
         <div class="ot-list">${cer.slice(0,40).map(o=>tarjeta(o)).join('')}</div></details>` : ''}
       ${!S.ot.length ? '<div class="empty">Aún no hay órdenes en planta.<br>Toca <b>＋ Nueva orden</b> abajo para crear la primera.</div>' : ''}
     `;
-    document.querySelectorAll('.cp-sec').forEach(b => b.onclick = () => { S.otSec = Number(b.dataset.s); vLista(); });
+    document.querySelectorAll('.cp-sec').forEach(b => b.onclick = () => { const i = Number(b.dataset.s); S.otSec = S.otSec === i ? null : i; vLista(); });
     $('#cpImp').onclick = elegirImpresion;
     document.querySelectorAll('.ot-card').forEach(card => {
       const o = S.ot.find(x => x.id === card.dataset.id); if(!o) return;
