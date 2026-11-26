@@ -32,6 +32,8 @@
   const SECCIONES = 8; // Programación … Almacén
   const VIEJO = [0, 1, 3, 5, 6, 7, 8, 9]; // estados viejos 0-7: Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
   const COD = i => ESTADOS[i][3];
+  const MAQ = 4; // sección Maquila: además de las que están en esa etapa, muestra todas las órdenes de tipo maquila activas
+  const enSeccion = (o, i) => o.estado === i || (i === MAQ && o.tipo === 'maquila' && o.estado < 8);
   const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? ESTADOS.findIndex(e => e[3] === v) : (VIEJO[v] ?? 0); return i < 0 ? 0 : i; };
   window.OT_CERRADA = CERRADA;
   const esOT = n => /^OT\s*[A-Za-z]*\s*\d+\s*\|/.test(String(n||''));
@@ -190,7 +192,7 @@
       ${pos ? `<div class="ot-pos">${pos}</div>` : `<div class="ot-pos h">${maq?'M':'H'}</div>`}
       <div class="ot-b">
         <div class="ot-t">Orden de trabajo N° ${o.num} <span class="ot-tipo ${maq?'':'h'}">${maq?'Maquila':'Higher'}</span>
-          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && S.otSec<0?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
+          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && (S.otSec<0 || (S.otSec===MAQ && o.estado!==MAQ))?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
@@ -227,7 +229,7 @@
   function vLista(){
     header(cabecera('Carga de planta'));
     if(!otListo){ $('#app').innerHTML = '<div class="empty">Cargando…</div>'; return; }
-    const sel = S.otSec, abierta = sel !== null, enSec = o => abierta && (sel < 0 || o.estado === sel);
+    const sel = S.otSec, abierta = sel !== null, enSec = o => abierta && (sel < 0 || enSeccion(o, sel));
     const act = activas(), cer = cerradas();
     const cola = colaMaquila(), colaV = cola.filter(enSec), hig = higherActivas().filter(enSec);
     const pares = l => l.reduce((a,o) => a + (o.pares||0), 0);
@@ -235,7 +237,7 @@
     const tarjetaSec = (i, ic, nom, col, lista, extra='') =>
       `<button class="cp-sec ${sel===i?'on':''}" data-s="${i}" style="--c:${col}"><span class="i">${ic}</span><span class="nm">${nom}</span><span class="n">${lista.length}</span><span class="p">${fmt(pares(lista))} pares${extra}</span></button>`;
     const total = tarjetaSec(-1, '🏭', 'Total planta', 'var(--acc)', act, atrasadas ? ` · <span class="warn">${atrasadas} atrasada${atrasadas===1?'':'s'}</span>` : '');
-    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => o.estado === i))).join('');
+    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => enSeccion(o, i)))).join('');
     const lista = [...colaV, ...hig], visibles = lista.length;
     $('#app').innerHTML = CSS + CSS_CP + `
       <div class="cp-secs">${total}${secs}</div>
@@ -308,11 +310,11 @@
     const lineas = String(o.desc||'').split(/\n+/).filter(Boolean);
     const ref = [...new Set(lineas.map(l => l.split(' · ')[0].trim()))].join(' / ') || '—';
     const tallas = [...new Set([...String(o.desc||'').matchAll(/T\s*(\d+)\s*[×x]/g)].map(m => m[1]))].join(', ');
-    return { num:o.num, cliente:o.cliente, ref, tallas, pares:o.pares||0, entrega:o.entrega ? o.entrega.split('-').reverse().join('/') : '', maq:o.tipo==='maquila' };
+    return { etapa:ESTADOS[o.estado][0], num:o.num, cliente:o.cliente, ref, tallas, pares:o.pares||0, entrega:o.entrega ? o.entrega.split('-').reverse().join('/') : '', maq:o.tipo==='maquila' };
   }
   function imprimir(k){
     const g = GRUPOS[k], hoy = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
-    const ords = i => activas().filter(o => o.estado === i).sort(porFecha).map(filaImp);
+    const ords = (i, estricto) => activas().filter(o => estricto ? o.estado === i : enSeccion(o, i)).sort(porFecha).map(filaImp);
     const logo = new URL('logo.png', location.href).href;
     const cab = (sub, n, pp) => `<table class="sgc">
       <tr><td rowspan="3" class="lg"><img src="${logo}" alt="HGR Higher"></td>
@@ -325,7 +327,7 @@
       <div class="pie"><span>HGR Higher · ${FORMATO.codigo} v${FORMATO.version} · Documento controlado — prohibida su modificación sin autorización</span><span>Impreso ${hoy}</span></div>`;
     let cuerpo;
     if(k === 'todo'){
-      const por = g.secs.map(ords), filas = Math.max(14, ...por.map(l => l.length));
+      const por = g.secs.map(i => ords(i, true)), filas = Math.max(14, ...por.map(l => l.length));
       let h = '<tr>' + g.secs.map(i => `<th colspan="3" class="sc">${ESTADOS[i][0]}</th>`).join('') + '</tr>';
       h += '<tr>' + g.secs.map(() => '<th>OT</th><th>Referencia</th><th>Cant</th>').join('') + '</tr>';
       for(let r = 0; r < filas; r++) h += '<tr>' + por.map(l => { const f = l[r]; return f ? `<td class="n">${escH(f.num)}</td><td>${escH(f.ref)}</td><td class="n">${f.pares}</td>` : '<td></td><td></td><td></td>'; }).join('') + '</tr>';
@@ -337,7 +339,7 @@
       const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
       const tablas = g.secs.map(i => {
         const fs = ords(i), tot = fs.reduce((a,f)=>a+f.pares,0), nom = ESTADOS[i][0];
-        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
+        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}${i===MAQ && f.etapa!=='Maquila'?`<br><small>en ${f.etapa}</small>`:''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
         for(let r = fs.length; r < FILAS_MIN; r++) tr += '<tr>' + '<td></td>'.repeat(8) + '</tr>';
         return `<div class="sec"><h3><span>${nom}</span><span>${fs.length} órdenes · ${tot} pares</span></h3><table>
           <tr><th style="width:11%">Orden</th><th style="width:19%">Cliente</th><th style="width:24%">Referencia</th><th style="width:7%">Talla</th><th style="width:8%">Cantidad</th><th style="width:9%">Entrega</th><th style="width:11%">Pasó a</th><th style="width:11%">Firma / ✓</th></tr>
