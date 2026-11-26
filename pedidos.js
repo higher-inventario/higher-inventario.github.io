@@ -77,7 +77,7 @@
   // marquillas que faltan para órdenes de trabajo activas (lo que quedó en negativo)
   function filasUrgentes(){
     const mem = leerMem();
-    const ots = (S.ot||[]).filter(o => o.estado < 6 && o.faltan && o.faltan.length).sort((a,b) => a.num - b.num);
+    const ots = (S.ot||[]).filter(o => o.estado < (window.OT_CERRADA||7) && o.faltan && o.faltan.length).sort((a,b) => a.num - b.num);
     const deficit = {};
     (S.mp||[]).forEach(x => { if(Number(x.cantidad) < 0) deficit[x.id] = -Number(x.cantidad); });
     const out = [];

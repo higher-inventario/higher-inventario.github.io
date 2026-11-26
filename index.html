@@ -273,7 +273,7 @@ const ROLES_LOGIN = [
   ['bodega','👢','Bodega','Botas terminadas'],
   ['mp','📦','Materia prima','Materiales de producción'],
   ['ventas','🏷️','Ventas','Consultar existencias'],
-  ['jefes','👔','Jefes','Ver bodega, materia prima y órdenes de trabajo']
+  ['jefes','👔','Jefes','Ver bodega, materia prima y carga de planta']
 ];
 function vLogin(){
   $('#cab').style.display='none'; $('#nav').style.display='none';
@@ -368,7 +368,7 @@ function header(html){ $('#hdr').innerHTML = html; estado();
   document.querySelectorAll('.secs button').forEach(b=>b.onclick=()=>{ if(S.sec===b.dataset.s) return; S.sec=b.dataset.s; S.vista = S.sec==='bodega'?'modelos':S.sec==='ot'?'otLista':'mpLista'; guardarSec(); iniciar(); });
 }
 function cabecera(titulo, extra=''){
-  const secs = veAmbas() ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button><button data-s="ot" class="${S.sec==='ot'?'on':''}">🛠️ Órdenes</button></div>` : '';
+  const secs = veAmbas() ? `<div class="secs"><button data-s="bodega" class="${S.sec==='bodega'?'on':''}">👢 Bodega</button><button data-s="mp" class="${S.sec==='mp'?'on':''}">📦 Materia prima</button><button data-s="ot" class="${S.sec==='ot'?'on':''}">🏭 Carga de planta</button></div>` : '';
   return `<div class="top"><div><img class="logo" src="logo.png" alt="HGR Higher"><h1>${titulo}</h1></div>
   <div class="der"><button class="rol on" id="salir">${NOMBRE_ROL[ROL]||''} · Salir</button>
   <div class="sync"><span class="dot"></span><span id="syncTxt"></span></div></div></div>${secs}${extra}`;
@@ -745,8 +745,8 @@ setInterval(()=>{ if(!document.hidden && PIN && ['modelos','detalle','alertas','
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && PIN) cargar(true); });
 iniciar();
 </script>
-  <script src="pedidos.js?v=5"></script>
-  <script src="ordenes.js?v=13"></script>
+  <script src="pedidos.js?v=6"></script>
+  <script src="ordenes.js?v=14"></script>
   <script src="segundas.js?v=2"></script>
   <script>
   /* Botones Seleccionar todo / Deseleccionar todo en el Pedido de marquillas */

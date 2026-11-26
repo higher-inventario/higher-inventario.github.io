@@ -8,22 +8,31 @@
    Se guardan en la misma hoja de Google como materiales ocultos de la
    categoría "Ordenes de trabajo":
      material = "OT 123 | M | Cliente | Descripción | 50 | 2026-12-05"
-     cantidad = estado (0 = Pendiente … 7 = Anulada)
+     cantidad = 10 + sección (10 = Programación … 18 = Anulada; 0-7 = estados viejos)
      mínimo   = posición en la cola de maquila
    ===================================================================== */
 (function(){
   const CAT = 'Ordenes de trabajo';
+  /* CARGA DE PLANTA: secciones por las que pasa cada orden.
+     En el servidor se guarda 10 + posición (10 = Programación … 18 = Anulada).
+     Los valores viejos (0 a 7) se traducen con VIEJO para no perder órdenes antiguas. */
   const ESTADOS = [
-    ['Pendiente',          '#8E8E93'],
-    ['En corte',           '#1E5BD8'],
-    ['En guarnición',      '#7B3FB8'],
-    ['En montaje',         '#F07A1A'],
-    ['En terminado',       '#F5B300'],
-    ['Lista para entregar','#22C55E'],
-    ['Entregada',          '#2E8B57'],
-    ['Anulada',            '#555555']
+    ['Programación', '#8E8E93', '🗓️'],
+    ['Troquelado',   '#1E5BD8', '✂️'],
+    ['Alistamiento', '#6EC6F0', '📐'],
+    ['Costura',      '#7B3FB8', '🧵'],
+    ['Montaje',      '#F07A1A', '🔨'],
+    ['Terminado',    '#F5B300', '✨'],
+    ['Almacén',      '#22C55E', '📦'],
+    ['Entregada',    '#2E8B57', '✅'],
+    ['Anulada',      '#555555', '⛔']
   ];
-  const CERRADA = 6; // desde "Entregada" en adelante ya no está activa
+  const CERRADA = 7; // desde "Entregada" en adelante ya no está activa
+  const SECCIONES = 7; // Programación … Almacén
+  const VIEJO = [0, 1, 3, 4, 5, 6, 7, 8]; // Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
+  const COD = i => 10 + i;
+  const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? v - 10 : (VIEJO[v] ?? 0); return Math.max(0, Math.min(ESTADOS.length-1, i)); };
+  window.OT_CERRADA = CERRADA;
   const esOT = n => /^OT\s*[A-Za-z]*\s*\d+\s*\|/.test(String(n||''));
   const limpio = s => String(s||'').replace(/\|/g,'/').replace(/\s+/g,' ').trim();
 
@@ -40,7 +49,7 @@
       desc: p[3] || '',
       pares: Number(p[4]) || 0,
       entrega: /^\d{4}-\d{2}-\d{2}$/.test(p[5]||'') ? p[5] : '',
-      estado: Math.max(0, Math.min(ESTADOS.length-1, Math.round(Number(x.cantidad)||0))),
+      estado: dec(x.cantidad),
       pos: Number(x.minimo) || 0,
       faltan: (p.find(v => /^F:/.test(v)) || 'F:').slice(2).split(',').filter(Boolean).map(t => { const [id,q] = t.split('*'); return { id, q: Number(q)||0 }; }).filter(c => c.id && c.q),
       consumo: /^C:/.test(p[6]||'') ? p[6].slice(2).split(',').map(t => { const [id,q] = t.split('*'); return { id, q: Number(q)||0 }; }).filter(c => c.id && c.q) : []
@@ -70,7 +79,7 @@
   const pintarNavPrev = window.pintarNav;
   window.pintarNav = function(){
     if(S.sec !== 'ot') return pintarNavPrev();
-    const items = [['otLista','🛠️','Órdenes'],['otMovs','🕑','Historial'],['otNueva','＋','Nueva orden']];
+    const items = [['otLista','🏭','Carga de planta'],['otMovs','🕑','Historial'],['otNueva','＋','Nueva orden']];
     $('#nav').innerHTML = items.map(([v,i,t])=>`<button data-v="${v}" class="${S.vista===v?'on':''}"><i>${i}</i>${t}</button>`).join('');
     document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{ S.vista=b.dataset.v; formPintado=false; render(); scrollTo(0,0); });
   };
@@ -180,7 +189,7 @@
       ${pos ? `<div class="ot-pos">${pos}</div>` : `<div class="ot-pos h">${maq?'M':'H'}</div>`}
       <div class="ot-b">
         <div class="ot-t">Orden de trabajo N° ${o.num} <span class="ot-tipo ${maq?'':'h'}">${maq?'Maquila':'Higher'}</span>
-          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}</div>
+          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && S.otSec<0?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
@@ -190,27 +199,56 @@
       </div></div>`;
   }
 
+  if(S.otSec === undefined) S.otSec = -1; // -1 = Total planta
+  const CSS_CP = `<style>
+    .cp-secs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+    @media (max-width:640px){.cp-secs{grid-template-columns:repeat(2,1fr)}}
+    .cp-sec{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:11px 12px 9px 15px;cursor:pointer;text-align:left;color:var(--txt);font:inherit}
+    .cp-sec:before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+    .cp-sec .i{font-size:19px}.cp-sec .nm{display:block;font-weight:800;font-size:14px;margin-top:3px}
+    .cp-sec .n{display:block;font-size:27px;font-weight:900;line-height:1.1;margin-top:3px}
+    .cp-sec .p{display:block;font-size:12px;color:var(--sub)}.cp-sec .p .warn{color:#ff8a80;font-weight:700}
+    .cp-sec.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--card))}
+    .cp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 2px 10px}
+    .cp-bar h2{margin:0;font-size:17px}.cp-bar h2 small{color:var(--sub);font-weight:500;font-size:13px;margin-left:6px}
+    .cp-imp{background:#22C55E;color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer;font-size:13px;white-space:nowrap}
+    .cp-tag{font-size:11px;font-weight:700;color:var(--ec)}
+    .cp-velo{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+    .cp-modal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;width:min(420px,92vw);max-height:90vh;overflow:auto}
+    .cp-modal h3{margin:0 0 4px}.cp-modal p{margin:0 0 12px;color:var(--sub);font-size:13px}
+    .cp-modal button{display:block;width:100%;text-align:left;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:7px;cursor:pointer;font-size:14px}
+    .cp-modal button small{display:block;color:var(--sub);font-size:12px}
+    .cp-modal button.x{text-align:center;background:none;border:0;color:var(--sub)}
+  </style>`;
+
   function vLista(){
-    header(cabecera('Órdenes de trabajo'));
+    header(cabecera('Carga de planta'));
     if(!otListo){ $('#app').innerHTML = '<div class="empty">Cargando…</div>'; return; }
-    const cola = colaMaquila(), hig = higherActivas(), cer = cerradas();
-    const atrasadas = activas().filter(o => infoEntrega(o).cls === 'tarde').length;
-    $('#app').innerHTML = CSS + `
-      <div class="stats">
-        <div class="stat"><b>${activas().length}</b><span>órdenes activas</span></div>
-        <div class="stat"><b>${cola.length}</b><span>de maquila en cola</span></div>
-        <div class="stat"><b class="${atrasadas?'warn':''}">${atrasadas}</b><span>atrasadas</span></div>
-      </div>
-      <div class="ot-sec">🏭 Maquila · prioridad <small>${cola.length}</small></div>
-      ${cola.length ? `<div class="ot-list">${cola.map((o,i)=>tarjeta(o, i+1, cola.length)).join('')}</div>`
-        : '<div class="empty" style="padding:18px 0">No hay órdenes de maquila activas</div>'}
-      <div class="ot-sec">👢 Órdenes Higher <small>${hig.length}</small> <span class="ot-ayuda">por fecha de entrega</span></div>
-      ${hig.length ? `<div class="ot-list">${hig.map(o=>tarjeta(o)).join('')}</div>`
-        : '<div class="empty" style="padding:18px 0">No hay órdenes Higher activas</div>'}
-      ${cer.length ? `<details class="ot-cerr"><summary>✅ Entregadas y anuladas (${cer.length})</summary>
+    const sel = S.otSec, enSec = o => sel < 0 || o.estado === sel;
+    const act = activas(), cer = cerradas();
+    const cola = colaMaquila(), colaV = cola.filter(enSec), hig = higherActivas().filter(enSec);
+    const pares = l => l.reduce((a,o) => a + (o.pares||0), 0);
+    const atrasadas = act.filter(o => infoEntrega(o).cls === 'tarde').length;
+    const tarjetaSec = (i, ic, nom, col, lista, extra='') =>
+      `<button class="cp-sec ${sel===i?'on':''}" data-s="${i}" style="--c:${col}"><span class="i">${ic}</span><span class="nm">${nom}</span><span class="n">${lista.length}</span><span class="p">${fmt(pares(lista))} pares${extra}</span></button>`;
+    const total = tarjetaSec(-1, '🏭', 'Total planta', 'var(--acc)', act, atrasadas ? ` · <span class="warn">${atrasadas} atrasada${atrasadas===1?'':'s'}</span>` : '');
+    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => o.estado === i))).join('');
+    const visibles = colaV.length + hig.length;
+    $('#app').innerHTML = CSS + CSS_CP + `
+      <div class="cp-secs">${total}${secs}</div>
+      <div class="cp-bar"><h2>${sel < 0 ? 'Todas las órdenes' : ESTADOS[sel][2]+' '+ESTADOS[sel][0]}<small>${visibles} órdenes · ${fmt(pares([...colaV, ...hig]))} pares</small></h2>
+        <button class="cp-imp" id="cpImp">🖨 Imprimir</button></div>
+      ${colaV.length ? `<div class="ot-sec">🏭 Maquila · prioridad <small>${colaV.length}</small></div>
+        <div class="ot-list">${colaV.map(o => tarjeta(o, cola.indexOf(o)+1, cola.length)).join('')}</div>` : ''}
+      ${hig.length ? `<div class="ot-sec">👢 Órdenes Higher <small>${hig.length}</small> <span class="ot-ayuda">por fecha de entrega</span></div>
+        <div class="ot-list">${hig.map(o=>tarjeta(o)).join('')}</div>` : ''}
+      ${!visibles && S.ot.length ? `<div class="empty" style="padding:18px 0">No hay órdenes en ${sel < 0 ? 'planta' : ESTADOS[sel][0]}</div>` : ''}
+      ${sel < 0 && cer.length ? `<details class="ot-cerr"><summary>✅ Entregadas y anuladas (${cer.length})</summary>
         <div class="ot-list">${cer.slice(0,40).map(o=>tarjeta(o)).join('')}</div></details>` : ''}
-      ${!S.ot.length ? '<div class="empty">Aún no hay órdenes de trabajo.<br>Toca <b>＋ Nueva orden</b> abajo para crear la primera.</div>' : ''}
+      ${!S.ot.length ? '<div class="empty">Aún no hay órdenes en planta.<br>Toca <b>＋ Nueva orden</b> abajo para crear la primera.</div>' : ''}
     `;
+    document.querySelectorAll('.cp-sec').forEach(b => b.onclick = () => { S.otSec = Number(b.dataset.s); vLista(); });
+    $('#cpImp').onclick = elegirImpresion;
     document.querySelectorAll('.ot-card').forEach(card => {
       const o = S.ot.find(x => x.id === card.dataset.id); if(!o) return;
       const sel = card.querySelector('.ot-est');
@@ -228,7 +266,7 @@
         const minimos = o.tipo==='maquila' ? numerar(colaMaquila()) : [];
         moverLocal(ajustes);
         vLista();
-        enviar({ nota:`OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`, fijar:[{ id:o.id, cantidad:nuevo }], minimos, ajustes },
+        enviar({ nota:`OT ${o.num}: ${ESTADOS[antes][0]} → ${ESTADOS[nuevo][0]}`, fijar:[{ id:o.id, cantidad:COD(nuevo) }], minimos, ajustes },
           `Orden N° ${o.num}: ${ESTADOS[nuevo][0]}${extra}`).catch(()=>{});
       };
       card.querySelectorAll('.ot-mv').forEach(b => b.onclick = () => {
@@ -242,6 +280,88 @@
     });
   }
 
+
+  // ---------- IMPRESIÓN: formato FO-PRO-001 Carga de planta ----------
+  const FORMATO = { codigo:'FO-PRO-001', version:'01', vigencia:'26/11/2026', proceso:'Producción' };
+  const GRUPOS = {
+    corte:     { nombre:'Corte',     secs:[0,1,2], ic:'✂️', sub:'Programación · Troquelado · Alistamiento' },
+    costura:   { nombre:'Costura',   secs:[3], ic:'🧵' },
+    montaje:   { nombre:'Montaje',   secs:[4], ic:'🔨' },
+    terminado: { nombre:'Terminado', secs:[5], ic:'✨' },
+    almacen:   { nombre:'Almacén',   secs:[6], ic:'📦' },
+    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,4,5,6], ic:'📋', sub:'Las 7 secciones en una sola hoja' }
+  };
+  function elegirImpresion(){
+    const d = document.createElement('div'); d.className = 'cp-velo';
+    d.innerHTML = `<div class="cp-modal"><h3>Imprimir carga de planta</h3><p>Formato ${FORMATO.codigo} · tamaño carta horizontal</p>
+      ${Object.entries(GRUPOS).map(([k,g]) => `<button data-g="${k}">${g.ic} ${g.nombre}${g.sub?`<small>${g.sub}</small>`:''}</button>`).join('')}
+      <button class="x">Cancelar</button></div>`;
+    document.body.appendChild(d);
+    d.onclick = e => { if(e.target === d || e.target.classList.contains('x')) d.remove(); };
+    d.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { d.remove(); imprimir(b.dataset.g); });
+  }
+  const escH = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function filaImp(o){
+    const lineas = String(o.desc||'').split(/\n+/).filter(Boolean);
+    const ref = [...new Set(lineas.map(l => l.split(' · ')[0].trim()))].join(' / ') || '—';
+    const tallas = [...new Set([...String(o.desc||'').matchAll(/T\s*(\d+)\s*[×x]/g)].map(m => m[1]))].join(', ');
+    return { num:o.num, cliente:o.cliente, ref, tallas, pares:o.pares||0, entrega:o.entrega ? o.entrega.split('-').reverse().join('/') : '', maq:o.tipo==='maquila' };
+  }
+  function imprimir(k){
+    const g = GRUPOS[k], hoy = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const ords = i => activas().filter(o => o.estado === i).sort(porFecha).map(filaImp);
+    const logo = new URL('logo.png', location.href).href;
+    const cab = sub => `<table class="sgc">
+      <tr><td rowspan="3" class="lg"><img src="${logo}" alt="HGR Higher"></td>
+          <td rowspan="2" class="tt"><div class="t1">CARGA DE PLANTA</div><div class="t2">${sub}</div></td>
+          <td class="k">Código</td><td class="v">${FORMATO.codigo}</td></tr>
+      <tr><td class="k">Versión</td><td class="v">${FORMATO.version}</td></tr>
+      <tr><td class="pr">Proceso: <b>${FORMATO.proceso}</b> · Sistema de Gestión de Calidad</td><td class="k">Vigencia</td><td class="v">${FORMATO.vigencia}</td></tr></table>
+      <table class="datos"><tr><td>Fecha: <b>${hoy}</b></td><td>Responsable: <span></span></td><td>Turno: <span></span></td><td>Página <b>1</b> de <b>1</b></td></tr></table>`;
+    const pie = `<table class="ctl"><tr><td>Elaboró: <b>Ing. de Procesos</b></td><td>Revisó: <b>Jefe de Producción</b></td><td>Aprobó: <b>Gerencia</b></td></tr></table>
+      <div class="pie"><span>HGR Higher · ${FORMATO.codigo} v${FORMATO.version} · Documento controlado — prohibida su modificación sin autorización</span><span>Impreso ${hoy}</span></div>`;
+    let cuerpo;
+    if(k === 'todo'){
+      const por = g.secs.map(ords), filas = Math.max(14, ...por.map(l => l.length));
+      let h = '<tr>' + g.secs.map(i => `<th colspan="3" class="sc">${ESTADOS[i][0]}</th>`).join('') + '</tr>';
+      h += '<tr>' + g.secs.map(() => '<th>OT</th><th>Referencia</th><th>Cant</th>').join('') + '</tr>';
+      for(let r = 0; r < filas; r++) h += '<tr>' + por.map(l => { const f = l[r]; return f ? `<td class="n">${escH(f.num)}</td><td>${escH(f.ref)}</td><td class="n">${f.pares}</td>` : '<td></td><td></td><td></td>'; }).join('') + '</tr>';
+      h += '<tr class="tot">' + por.map(l => `<td colspan="2" style="text-align:right">Total</td><td class="n">${l.reduce((a,f)=>a+f.pares,0)}</td>`).join('') + '</tr>';
+      const todas = por.flat();
+      cuerpo = cab('Vista general de planta') + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
+        <table class="gen"><colgroup>${'<col style="width:3.9%"><col style="width:6.9%"><col style="width:3.4%">'.repeat(7)}</colgroup>${h}</table></div>` + pie;
+    } else {
+      const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
+      const tablas = g.secs.map(i => {
+        const fs = ords(i), tot = fs.reduce((a,f)=>a+f.pares,0), nom = ESTADOS[i][0];
+        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
+        for(let r = fs.length; r < FILAS_MIN; r++) tr += '<tr>' + '<td></td>'.repeat(8) + '</tr>';
+        return `<div class="sec"><h3><span>${nom}</span><span>${fs.length} órdenes · ${tot} pares</span></h3><table>
+          <tr><th style="width:11%">Orden</th><th style="width:19%">Cliente</th><th style="width:24%">Referencia</th><th style="width:7%">Talla</th><th style="width:8%">Cantidad</th><th style="width:9%">Entrega</th><th style="width:11%">Pasó a</th><th style="width:11%">Firma / ✓</th></tr>
+          ${tr}<tr class="tot"><td colspan="4" style="text-align:right">TOTAL ${nom.toUpperCase()}</td><td class="n">${tot}</td><td colspan="3"></td></tr></table></div>`;
+      }).join('');
+      cuerpo = cab(g.secs.length > 1 ? `${g.nombre} — ${g.sub}` : g.nombre) + tablas +
+        '<div class="firma"><div>Entregó</div><div>Recibió</div><div>Jefe de planta</div></div>' + pie;
+    }
+    const css = `@page{size:letter landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .hoja{padding:7mm 9mm 5mm}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #222;padding:4px 6px;height:6mm}
+      th{background:#f2f2f2;font-size:10px;text-transform:uppercase;text-align:center}td.n{text-align:center}td small{color:#666}tr.tot td{font-weight:700;background:#f2f2f2}
+      table.sgc{border:1.5px solid #222}table.sgc td{height:auto;padding:3px 8px}table.sgc .lg{width:40mm;text-align:center}table.sgc .lg img{height:15mm}
+      table.sgc .tt{text-align:center}.t1{font-size:19px;font-weight:800;letter-spacing:1px}.t2{font-size:12.5px;font-weight:700;color:#444;margin-top:2px}
+      table.sgc .pr{text-align:center;font-size:10.5px;color:#333}table.sgc .k{width:20mm;background:#f2f2f2;font-weight:700;font-size:10px;text-transform:uppercase}table.sgc .v{width:30mm;font-weight:700;text-align:center}
+      table.datos{margin-top:2mm;border:1px solid #222}table.datos td{border:0;border-right:1px solid #222;height:auto;padding:4px 8px}table.datos td:last-child{border-right:0;text-align:right}
+      table.datos span{display:inline-block;min-width:40mm;border-bottom:1px solid #999}
+      .sec{margin-top:4mm;break-inside:avoid}.sec h3{margin:0;background:#F5B300;border:1.5px solid #222;border-bottom:0;padding:4px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
+      .firma{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12mm;margin-top:8mm;font-size:11px;text-align:center}.firma div{border-top:1px solid #222;padding-top:3px}
+      table.ctl{margin-top:4mm}table.ctl td{height:auto;padding:3px 8px;font-size:9.5px;background:#f2f2f2}.pie{margin-top:3mm;font-size:9px;color:#777;display:flex;justify-content:space-between}
+      table.gen{table-layout:fixed;font-size:8.5px}table.gen th,table.gen td{height:6.5mm;padding:2px 3px;overflow:hidden}table.gen th{font-size:7.5px;padding:2px 1px}table.gen th.sc{background:#F5B300;font-size:9.5px}
+      table.gen td:nth-child(3n),table.gen th:nth-child(3n){border-right:2px solid #222}`;
+    const w = window.open('', '_blank');
+    if(!w){ alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para esta página.'); return; }
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${FORMATO.codigo} Carga de planta - ${g.nombre}</title><style>${css}</style></head>
+      <body><div class="hoja">${cuerpo}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+    w.document.close();
+  }
 
   /* ---------- RECETAS: lo que lleva cada modelo ----------
      Banana, HGR, insignia, canillera, cauchos…: 2 unidades por par.
@@ -523,7 +643,7 @@
         const n = String(m.material).match(/^OT\s*([A-Za-z]*\s*\d+)/);
         return `<div class="item mov" style="cursor:default"><div style="flex:1">
           <div class="n">Orden de trabajo N° ${n?n[1]:''}</div>
-          <div class="s">${esc(m.fecha)} · ${esc(m.nota || ESTADOS[Math.round(m.despues)||0]?.[0] || '')}${m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div></div>`;
+          <div class="s">${esc(m.fecha)} · ${esc(m.nota || ESTADOS[dec(m.despues)]?.[0] || '')}${m.rol?' · '+esc(NOMBRE_ROL[m.rol]||m.rol):''}</div></div></div>`;
       }).join('') : '<div class="empty">Aún no hay cambios de estado</div>';
     }catch(e){ $('#app').innerHTML = '<div class="empty">No se pudo cargar el historial</div>'; }
   }
