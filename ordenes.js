@@ -32,10 +32,10 @@
   const SECCIONES = 8; // Programación … Almacén
   const VIEJO = [0, 1, 3, 5, 6, 7, 8, 9]; // estados viejos 0-7: Pendiente→Programación, En corte→Troquelado, En guarnición→Costura, Montaje, Terminado, Lista→Almacén, Entregada, Anulada
   const COD = i => ESTADOS[i][3];
-  /* "Maquila" no es una tarjeta ni una hoja: es un destino que se elige en la lista de la orden.
-     Las órdenes que están en maquila se ven (e imprimen) dentro de Costura, con su etiqueta. */
+  /* Maquila es una sección más (tarjeta y hoja propias). Se llega a ella eligiéndola en la lista
+     de la orden o al crear la orden; desde Costura el botón de traslado pasa directo a Montaje. */
   const MAQ = 4, COSTURA = 3;
-  const enSeccion = (o, i) => o.estado === i || (i === COSTURA && o.estado === MAQ);
+  const enSeccion = (o, i) => o.estado === i;
   const siguiente = e => e === COSTURA || e === MAQ ? MAQ + 1 : e + 1; // de Costura o Maquila pasa a Montaje
   const dec = v => { v = Math.round(Number(v)||0); const i = v >= 10 ? ESTADOS.findIndex(e => e[3] === v) : (VIEJO[v] ?? 0); return i < 0 ? 0 : i; };
   window.OT_CERRADA = CERRADA;
@@ -195,7 +195,7 @@
       ${pos ? `<div class="ot-pos">${pos}</div>` : `<div class="ot-pos h">${maq?'M':'H'}</div>`}
       <div class="ot-b">
         <div class="ot-t">Orden de trabajo N° ${o.num} <span class="ot-tipo ${maq?'':'h'}">${maq?'Maquila':'Higher'}</span>
-          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && (S.otSec<0 || o.estado===MAQ)?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
+          ${o.estado>=CERRADA?`<span class="ot-badge">${nom}</span>`:''}${o.estado<CERRADA && S.otSec<0?`<span class="cp-tag">${ESTADOS[o.estado][2]} ${nom}</span>`:''}</div>
         <div class="ot-s">${o.cliente?esc(o.cliente)+' · ':''}${o.pares?fmt(o.pares)+' pares · ':''}<span class="${e.cls}">${e.txt}</span></div>
         ${o.desc?`<div class="ot-d">${esc(o.desc)}</div>`:''}
         <div class="ot-acc">
@@ -208,7 +208,7 @@
 
   if(S.otSec === undefined) S.otSec = null; // null = ninguna abierta · -1 = Total planta
   const CSS_CP = `<style>
-    .cp-secs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+    .cp-secs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
     @media (max-width:640px){.cp-secs{grid-template-columns:repeat(2,1fr)}}
     .cp-sec{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:11px 12px 9px 15px;cursor:pointer;text-align:left;color:var(--txt);font:inherit}
     .cp-sec:before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
@@ -240,7 +240,7 @@
     const tarjetaSec = (i, ic, nom, col, lista, extra='') =>
       `<button class="cp-sec ${sel===i?'on':''}" data-s="${i}" style="--c:${col}"><span class="i">${ic}</span><span class="nm">${nom}</span><span class="n">${lista.length}</span><span class="p">${fmt(pares(lista))} pares${extra}</span></button>`;
     const total = tarjetaSec(-1, '🏭', 'Total planta', 'var(--acc)', act, atrasadas ? ` · <span class="warn">${atrasadas} atrasada${atrasadas===1?'':'s'}</span>` : '');
-    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => i === MAQ ? '' : tarjetaSec(i, ic, n, c, act.filter(o => enSeccion(o, i)))).join('');
+    const secs = ESTADOS.slice(0, SECCIONES).map(([n,c,ic], i) => tarjetaSec(i, ic, n, c, act.filter(o => enSeccion(o, i)))).join('');
     const lista = [...colaV, ...hig], visibles = lista.length;
     $('#app').innerHTML = CSS + CSS_CP + `
       <div class="cp-secs">${total}${secs}</div>
@@ -293,10 +293,11 @@
   const GRUPOS = {
     corte:     { nombre:'Corte',     secs:[0,1,2], ic:'✂️', sub:'Programación · Troquelado · Alistamiento' },
     costura:   { nombre:'Costura',   secs:[3], ic:'🧵' },
+    maquila:   { nombre:'Maquila',   secs:[4], ic:'🤝' },
     montaje:   { nombre:'Montaje',   secs:[5], ic:'🔨' },
     terminado: { nombre:'Terminado', secs:[6], ic:'✨' },
     almacen:   { nombre:'Almacén',   secs:[7], ic:'📦' },
-    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,5,6,7], ic:'📋', sub:'Las 7 secciones en una sola hoja' }
+    todo:      { nombre:'Todo (vista general)', secs:[0,1,2,3,4,5,6,7], ic:'📋', sub:'Las 8 secciones en una sola hoja' }
   };
   function elegirImpresion(){
     const d = document.createElement('div'); d.className = 'cp-velo';
@@ -336,12 +337,12 @@
       h += '<tr class="tot">' + por.map(l => `<td colspan="2" style="text-align:right">Total</td><td class="n">${l.reduce((a,f)=>a+f.pares,0)}</td>`).join('') + '</tr>';
       const todas = por.flat();
       cuerpo = cab('Vista general de planta', todas.length, todas.reduce((a,f)=>a+f.pares,0)) + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
-        <table class="gen"><colgroup>${'<col style="width:3.9%"><col style="width:6.9%"><col style="width:3.4%">'.repeat(7)}</colgroup>${h}</table></div>` + pie;
+        <table class="gen"><colgroup>${'<col style="width:3.4%"><col style="width:6.1%"><col style="width:3%">'.repeat(8)}</colgroup>${h}</table></div>` + pie;
     } else {
       const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
       const tablas = g.secs.map(i => {
         const fs = ords(i), tot = fs.reduce((a,f)=>a+f.pares,0), nom = ESTADOS[i][0];
-        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}${f.etapa==='Maquila'?' <small>(en maquila)</small>':''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
+        let tr = fs.map(f => `<tr><td class="n"><b>${escH(f.num)}</b>${f.maq?' <small>(M)</small>':''}</td><td>${escH(f.cliente)}</td><td>${escH(f.ref)}</td><td class="n">${escH(f.tallas)}</td><td class="n"><b>${f.pares}</b></td><td class="n">${f.entrega}</td><td></td><td></td></tr>`).join('');
         for(let r = fs.length; r < FILAS_MIN; r++) tr += '<tr>' + '<td></td>'.repeat(8) + '</tr>';
         return `<div class="sec"><h3><span>${nom}</span><span>${fs.length} órdenes · ${tot} pares</span></h3><table>
           <tr><th style="width:11%">Orden</th><th style="width:19%">Cliente</th><th style="width:24%">Referencia</th><th style="width:7%">Talla</th><th style="width:8%">Cantidad</th><th style="width:9%">Entrega</th><th style="width:11%">Pasó a</th><th style="width:11%">Firma / ✓</th></tr>
@@ -502,10 +503,12 @@
     if(!otListo){ $('#app').innerHTML = '<div class="empty">Cargando…</div>'; return; }
     formPintado = true;
     const cola = colaMaquila();
-    let tipo = 'maquila';
+    let tipo = 'higher';
     const R = { modelo:'', color:'', suela:'', tallas:{}, colores:{} };
     $('#app').innerHTML = CSS + `<div class="ot-form">
-      <div class="ot-tip"><button data-t="maquila" class="on">🏭 Maquila</button><button data-t="higher">👢 Higher</button></div>
+      <label><small>¿A qué sección llega la orden?</small><select id="otSecIni">
+        ${ESTADOS.slice(0, SECCIONES).map(([n,,ic],i)=>`<option value="${i}">${ic} ${n}</option>`).join('')}
+      </select></label>
       <label><small>Modelo (para sacar la materia prima)</small><select id="otMod">
         <option value="">— Sin modelo (orden libre, no descuenta) —</option>
         ${Object.keys(RECETAS).map(m=>`<option>${esc(m)}</option>`).join('')}
@@ -519,11 +522,11 @@
         <label><small>N° de orden</small><input id="otNum" autocapitalize="characters" maxlength="10" style="text-transform:uppercase" placeholder="Ej: R123" value="${proximoNum()}"></label>
         <label><small>Pares</small><input id="otPares" inputmode="numeric" placeholder="Ej: 50"></label>
       </div>
-      <label><small id="otCliT">Cliente de la maquila</small><input id="otCli" placeholder="Ej: nombre del cliente"></label>
+      <label><small id="otCliT">Cliente (opcional)</small><input id="otCli" placeholder="Ej: nombre del cliente"></label>
       <label><small id="otDescT">Descripción (modelo, colores, tallas…)</small><textarea id="otDesc" placeholder="Ej: Botín Urban rojo, tallas 36 a 42"></textarea></label>
       <div class="ot-2">
         <label><small>Fecha de entrega</small><input id="otFecha" type="date"></label>
-        <label id="otPosL"><small>Prioridad en maquila</small><select id="otPos">
+        <label id="otPosL" style="visibility:hidden"><small>Prioridad en maquila</small><select id="otPos">
           ${cola.map((o,i)=>`<option value="${i+1}">#${i+1} (antes de la N° ${o.num})</option>`).join('')}
           <option value="${cola.length+1}" selected>#${cola.length+1} (al final de la cola)</option>
         </select></label>
@@ -531,12 +534,11 @@
       <div id="otMat"></div>
       <button class="btn" id="otCrear">Crear orden de trabajo</button>
     </div>`;
-    document.querySelectorAll('.ot-tip button').forEach(b => b.onclick = () => {
-      tipo = b.dataset.t;
-      document.querySelectorAll('.ot-tip button').forEach(x => x.classList.toggle('on', x === b));
+    $('#otSecIni').onchange = () => {
+      tipo = Number($('#otSecIni').value) === MAQ ? 'maquila' : 'higher';
       $('#otPosL').style.visibility = tipo==='maquila' ? '' : 'hidden';
       $('#otCliT').textContent = tipo==='maquila' ? 'Cliente de la maquila' : 'Cliente (opcional)';
-    });
+    };
 
     const totalPares = () => Object.values(R.tallas).reduce((a,b)=>a+b,0);
     const resumenTallas = () => Object.entries(R.tallas).filter(([,p])=>p).map(([t,p])=>`T${t}×${p}`).join(', ');
@@ -627,12 +629,13 @@
       const minimos = [];
       if(tipo==='maquila') colaMaquila().forEach((o,k) => { const nueva = k+1 >= pos ? k+2 : k+1; if(o.pos !== nueva){ o.pos = nueva; if(!o.tmp) minimos.push({ id:o.id, minimo:nueva }); } });
       // pantalla al instante
-      const local = parse({ id:'tmp-'+num, material:nombre, cantidad:0, minimo:pos }); local.tmp = true;
+      const secIni = Number($('#otSecIni').value) || 0, codIni = COD(secIni);
+      const local = parse({ id:'tmp-'+num, material:nombre, cantidad:codIni, minimo:pos }); local.tmp = true;
       S.ot.push(local);
       moverLocal(ajustes);
-      S.vista = 'otLista'; formPintado = false; render(); scrollTo(0,0);
+      S.vista = 'otLista'; S.otSec = secIni; formPintado = false; render(); scrollTo(0,0);
       // servidor en segundo plano, una sola llamada
-      enviar({ nota:`OT ${num} · ${R.modelo ? R.modelo+' '+R.color : 'creada'}`, crear:{ material:nombre, categoria:CAT, unidad:'orden', cantidad:0, minimo:pos }, ajustes, minimos },
+      enviar({ nota:`OT ${num} · ${R.modelo ? R.modelo+' '+R.color : 'creada'}`, crear:{ material:nombre, categoria:CAT, unidad:'orden', cantidad:codIni, minimo:pos }, ajustes, minimos },
         ajustes.length ? `Orden N° ${num} creada y materia prima descontada` : `Orden de trabajo N° ${num} creada`,
         `La orden N° ${num} no quedó guardada. Vuelve a crearla.`)
         .then(r => { if(r && r.id){ local.id = r.id; } local.tmp = false; if(S.sec==='ot' && S.vista==='otLista') vLista(); })
