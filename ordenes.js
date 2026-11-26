@@ -311,13 +311,13 @@
     const g = GRUPOS[k], hoy = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
     const ords = i => activas().filter(o => o.estado === i).sort(porFecha).map(filaImp);
     const logo = new URL('logo.png', location.href).href;
-    const cab = sub => `<table class="sgc">
+    const cab = (sub, n, pp) => `<table class="sgc">
       <tr><td rowspan="3" class="lg"><img src="${logo}" alt="HGR Higher"></td>
           <td rowspan="2" class="tt"><div class="t1">CARGA DE PLANTA</div><div class="t2">${sub}</div></td>
           <td class="k">Código</td><td class="v">${FORMATO.codigo}</td></tr>
       <tr><td class="k">Versión</td><td class="v">${FORMATO.version}</td></tr>
       <tr><td class="pr">Proceso: <b>${FORMATO.proceso}</b> · Sistema de Gestión de Calidad</td><td class="k">Vigencia</td><td class="v">${FORMATO.vigencia}</td></tr></table>
-      <table class="datos"><tr><td>Fecha: <b>${hoy}</b></td><td>Responsable: <span></span></td><td>Turno: <span></span></td><td>Página <b>1</b> de <b>1</b></td></tr></table>`;
+      <table class="datos"><tr><td>Fecha: <b>${hoy}</b></td><td>Responsable: <span></span></td><td>Turno: <span></span></td><td>Órdenes: <b>${n}</b> · Pares: <b>${pp}</b></td></tr></table>`;
     const pie = `<table class="ctl"><tr><td>Elaboró: <b>Ing. de Procesos</b></td><td>Revisó: <b>Jefe de Producción</b></td><td>Aprobó: <b>Gerencia</b></td></tr></table>
       <div class="pie"><span>HGR Higher · ${FORMATO.codigo} v${FORMATO.version} · Documento controlado — prohibida su modificación sin autorización</span><span>Impreso ${hoy}</span></div>`;
     let cuerpo;
@@ -328,7 +328,7 @@
       for(let r = 0; r < filas; r++) h += '<tr>' + por.map(l => { const f = l[r]; return f ? `<td class="n">${escH(f.num)}</td><td>${escH(f.ref)}</td><td class="n">${f.pares}</td>` : '<td></td><td></td><td></td>'; }).join('') + '</tr>';
       h += '<tr class="tot">' + por.map(l => `<td colspan="2" style="text-align:right">Total</td><td class="n">${l.reduce((a,f)=>a+f.pares,0)}</td>`).join('') + '</tr>';
       const todas = por.flat();
-      cuerpo = cab('Vista general de planta') + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
+      cuerpo = cab('Vista general de planta', todas.length, todas.reduce((a,f)=>a+f.pares,0)) + `<div class="sec"><h3><span>Todas las secciones</span><span>${todas.length} órdenes · ${todas.reduce((a,f)=>a+f.pares,0)} pares en planta</span></h3>
         <table class="gen"><colgroup>${'<col style="width:3.9%"><col style="width:6.9%"><col style="width:3.4%">'.repeat(7)}</colgroup>${h}</table></div>` + pie;
     } else {
       const FILAS_MIN = g.secs.length > 1 ? 4 : 12;
@@ -340,7 +340,8 @@
           <tr><th style="width:11%">Orden</th><th style="width:19%">Cliente</th><th style="width:24%">Referencia</th><th style="width:7%">Talla</th><th style="width:8%">Cantidad</th><th style="width:9%">Entrega</th><th style="width:11%">Pasó a</th><th style="width:11%">Firma / ✓</th></tr>
           ${tr}<tr class="tot"><td colspan="4" style="text-align:right">TOTAL ${nom.toUpperCase()}</td><td class="n">${tot}</td><td colspan="3"></td></tr></table></div>`;
       }).join('');
-      cuerpo = cab(g.secs.length > 1 ? `${g.nombre} — ${g.sub}` : g.nombre) + tablas +
+      const todas = g.secs.flatMap(ords);
+      cuerpo = cab(g.secs.length > 1 ? `${g.nombre} — ${g.sub}` : g.nombre, todas.length, todas.reduce((a,f)=>a+f.pares,0)) + tablas +
         '<div class="firma"><div>Entregó</div><div>Recibió</div><div>Jefe de planta</div></div>' + pie;
     }
     const css = `@page{size:letter landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
